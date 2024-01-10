@@ -2,8 +2,8 @@ import json
 import random
 from enum import Enum
 
+from . import ambr
 from .database import Database
-from ._vendor import requests
 
 soft_pity_5_star = 75
 hard_pity_5_star = 90
@@ -16,12 +16,12 @@ pull_pity_weights = (1, 8, 53)
 class GachaMachine:
 
     def __init__(self):
-        self.genshin_5_star_characters = json.loads(requests.get("https://api.genshin.dev/characters/all?rarity=5").content)
-        self.genshin_4_star_characters = json.loads(requests.get("https://api.genshin.dev/characters/all?rarity=4").content)
-        self.genshin_4_star_weapons = json.loads(requests.get("https://api.genshin.dev/weapons/all?rarity=4").content)
-        self.genshin_3_star_weapons = json.loads(requests.get("https://api.genshin.dev/weapons/all?rarity=3").content)
-
         self.data = Database()
+
+        self.rarity_sorted_characters = ambr.sort_by_rarity(self.data.characters)
+        print(self.rarity_sorted_characters[4])
+        self.rarity_sorted_weapons = ambr.sort_by_rarity(self.data.weapons)
+        print(self.rarity_sorted_weapons[3])
 
     def roll(self):
         roll = {}
@@ -40,27 +40,19 @@ class GachaMachine:
             pull_rarity = random.choices(pull_rarities, pull_base_weights)[0]
 
         if pull_rarity == 5: # Pull for 5 star character
-            pull = random.choice(self.genshin_5_star_characters)
-            search_name = pull['name'].lower().replace(' ', '-')
-            pull['image_data'] = requests.get("https://api.genshin.dev/characters/{}/gacha-splash".format(search_name)).content
+            pull = random.choice(self.rarity_sorted_characters[5])
             
             self.data.pity_5_star = 0 # Assuming 4 and 5 star pity are treated separately
         elif pull_rarity == 4: # Decide on 4 star character vs weapon, then pull
             if random.randint(0, 1):  
-                pull = random.choice(self.genshin_4_star_characters)
-                search_name = pull['name'].lower().replace(' ', '-')
-                pull['image_data'] = requests.get("https://api.genshin.dev/characters/{}/gacha-splash".format(search_name)).content
+                pull = random.choice(self.rarity_sorted_characters[4])
             else:
-                pull = random.choice(self.genshin_4_star_weapons)
-                search_name = pull['name'].lower().replace(' ', '-')
-                pull['image_data'] = requests.get("https://api.genshin.dev/weapons/{}/icon".format(search_name)).content
+                pull = random.choice(self.rarity_sorted_weapons[4])
 
             self.data.pity_4_star = 0 # Assuming 4 and 5 star pity are treated separately
             self.data.pity_5_star = self.data.pity_5_star + 1
         elif pull_rarity == 3: # Pull for 3 star weapon
-            pull = random.choice(self.genshin_3_star_weapons)
-            search_name = pull['name'].lower().replace(' ', '-')
-            pull['image_data'] = requests.get("https://api.genshin.dev/weapons/{}/icon".format(search_name)).content
+            pull = random.choice(self.rarity_sorted_weapons[3])
 
             self.data.pity_4_star = self.data.pity_4_star + 1
             self.data.pity_5_star = self.data.pity_5_star + 1
