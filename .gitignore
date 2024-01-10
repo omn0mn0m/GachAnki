@@ -1,5 +1,5 @@
 # -*- mode: gitignore; -*-
-_vendor/*
+_vendor/
 !_vendor/__init__.py
 !_vendor/vendor.txt
 
