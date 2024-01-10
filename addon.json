@@ -1,0 +1,14 @@
+{
+    "display_name": "Degeneranki",
+    "module_name": "degeneranki",
+    "repo_name": "degeneranki",
+    "ankiweb_id": "651549367",
+    "author": "omn0mn0m",
+    "contact": "https://omn0mn0m.com",
+    "homepage": "https://github.com/omn0mn0m/degeneranki",
+    "copyright_start": 2024,
+    "tags": "genshin gacha reinforcement gamification anime",
+    "conflicts": [],
+    "targets": ["anki21"],
+    "min_anki_version": "2.1.1"
+}
