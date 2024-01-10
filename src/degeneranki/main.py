@@ -78,7 +78,11 @@ class GachaWidget(QWidget):
         painter.begin(roll_pixmap)
         
         image = QImage()
-        image.loadFromData(roll["image_data"])
+
+        if hasattr(roll, 'gacha'):
+            image.loadFromData(requests.get(roll.gacha).content)
+        else:
+            image.loadFromData(requests.get(roll.icon).content)
         image_pixmap = QPixmap(image)
         image_pixmap = image_pixmap.scaled(
             max(480, min(image_pixmap.width(), MAX_ROLL_IMAGE_WIDTH)),
@@ -92,9 +96,9 @@ class GachaWidget(QWidget):
         painter.drawPixmap(start_x, start_y, image_pixmap)
         painter.setPen(QColor(255, 255, 255))
         painter.setFont(QFont('Arial', 28))
-        painter.drawText(32, (MAX_ROLL_IMAGE_HEIGHT // 2), roll["name"])
+        painter.drawText(32, (MAX_ROLL_IMAGE_HEIGHT // 2), roll.name)
         painter.setPen(QColor(255, 215, 0))
-        painter.drawText(32, (MAX_ROLL_IMAGE_HEIGHT // 2) + 40, "★" * roll["rarity"])
+        painter.drawText(32, (MAX_ROLL_IMAGE_HEIGHT // 2) + 40, "★" * roll.rarity)
 
         painter.end()
 
