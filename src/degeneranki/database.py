@@ -3,7 +3,7 @@ import sqlite3
 import sys
 from os import path
 
-from . import ambr
+from .api import ambr
 
 class Database:
 

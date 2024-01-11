@@ -1,9 +1,9 @@
 import functools
+import urllib3
 import sys
 from os import path
 
 from .gacha import GachaMachine
-from ._vendor import requests
 
 # import the main window object (mw) from aqt
 from aqt import gui_hooks, mw
@@ -13,6 +13,7 @@ from aqt.utils import showInfo, qconnect
 from aqt.qt import *
 
 gacha = GachaMachine()
+http = urllib3.PoolManager()
 
 MAX_ROLL_IMAGE_WIDTH = 1280
 MAX_ROLL_IMAGE_HEIGHT = 720
@@ -80,13 +81,13 @@ class GachaWidget(QWidget):
         image = QImage()
 
         if hasattr(roll, 'gacha'):
-            image.loadFromData(requests.get(roll.gacha).content)
+            image.loadFromData(http.request("GET", roll.icon).data)
         else:
-            image.loadFromData(requests.get(roll.icon).content)
+            image.loadFromData(http.request("GET", roll.icon).data)
         image_pixmap = QPixmap(image)
         image_pixmap = image_pixmap.scaled(
-            max(480, min(image_pixmap.width(), MAX_ROLL_IMAGE_WIDTH)),
-            max(480, min(image_pixmap.height(), MAX_ROLL_IMAGE_HEIGHT)),
+            max(480, image_pixmap.width()), # max(480, min(image_pixmap.width(), MAX_ROLL_IMAGE_WIDTH)),
+            max(480, image_pixmap.height()), # max(480, min(image_pixmap.height(), MAX_ROLL_IMAGE_HEIGHT)),
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation)
 
