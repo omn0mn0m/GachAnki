@@ -1,15 +1,19 @@
  
 from dataclasses import dataclass
-
-import requests
+import json
+import urllib3
 
 data_url = "https://api.ambr.top/v2/en/{}"
 image_url = "https://api.ambr.top/assets/UI/{}.png"
 
+http = urllib3.PoolManager()
+
 # === General Utility ===
 def _request_data(api_endpoint) -> dict:
-    response = requests.get(data_url.format(api_endpoint))
-    return response.json()['data']
+    response = http.request("GET", data_url.format(api_endpoint))
+    response_json = json.loads(response.data.decode("utf-8"))
+
+    return response_json['data']
 
 def sort_by_rarity(items):
     sorted = {

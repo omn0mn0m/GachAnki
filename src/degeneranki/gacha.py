@@ -2,7 +2,7 @@ import json
 import random
 from enum import Enum
 
-from . import ambr
+from .api import ambr
 from .database import Database
 
 soft_pity_5_star = 75
