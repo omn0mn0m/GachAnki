@@ -43,34 +43,58 @@ class Database:
         # Load sqlite3 database data
         self.conn = sqlite3.connect(path.join(root_project_dir, "user_files", "database.db"))
         self.conn.cursor().execute(f"""
-        CREATE TABLE IF NOT EXISTS characters
-        (character_id INT PRIMARY KEY,
-        name TEXT,
-        splash VARCHAR(2000),
-        icon VARCHAR(2000),
-        dupes INT,
-        level INT);
-        """)
-        self.conn.cursor().execute(f"""
         CREATE TABLE IF NOT EXISTS weapons
-        (weapon_id INT NOT NULL PRIMARY KEY,
-        name TEXT,
-        splash VARCHAR(2000),
-        icon VARCHAR(2000));
+        (id VARCHAR(32) NOT NULL PRIMARY KEY,
+        quantity INT DEFAULT 1);
         """)
         self.conn.cursor().execute(f"""
-        CREATE TABLE IF NOT EXISTS weapons_inventory
-        (weapon_id INT NOT NULL PRIMARY KEY,
-        quantity INT);
+        CREATE TABLE IF NOT EXISTS characters
+        (id VARCHAR(32) NOT NULL PRIMARY KEY,
+        quantity INT DEFAULT 1,
+        xp INT DEFAULT 0);
         """)
 
-        self.load()
+    def get_owned_characters(self):
+        return self.conn.cursor().execute("SELECT * FROM characters").fetchall()
+        
+    def get_owned_weapons(self):
+        return self.conn.cursor().execute("SELECT * FROM weapons").fetchall()
 
-    def load(self):
-        self.conn.cursor().execute(f"""
-        SELECT * FROM characters
-        """
-        )
+    def add_owned_character(self, character_id):
+        parameters = {
+            'id': character_id,
+        }
+        self.conn.cursor().execute("""INSERT INTO characters (id)
+        VALUES (:id)
+        ON CONFLICT (id)
+        DO UPDATE SET quantity = quantity + 1
+        """, parameters)
+        self.conn.commit()
+
+    def increment_character_xp(self, character_id, xp):
+        parameters = {
+            'xp': xp,
+            'id': character_id,
+        }
+        self.conn.cursor().execute("""UPDATE characters
+        SET xp = xp + :xp
+        WHERE id = :id
+        """, parameters)
+        self.conn.commit()
+
+    def add_owned_weapon(self, weapon_id):
+        parameters = {
+            'id': weapon_id,
+        }
+        self.conn.cursor().execute("""INSERT INTO weapons (id)
+        VALUES (:id)
+        ON CONFLICT (id)
+        DO UPDATE SET quantity = quantity + 1
+        """, parameters)
+        self.conn.commit()
+        
+    def own_weapons(self, weapon_id):
+        pass
 
     def save(self):
         data = {
