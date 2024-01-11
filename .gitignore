@@ -3,6 +3,9 @@ _vendor/
 !_vendor/__init__.py
 !_vendor/vendor.txt
 
+database.db
+data.json
+
 *~
 \#*\#
 /.emacs.desktop
