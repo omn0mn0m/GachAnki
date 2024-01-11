@@ -1,7 +1,7 @@
 # degeneranki
 Anki gacha pull add-on for a bit of extra dopamine.
 
-**NOTE:** This addon is only availabile for Anki Qt6. I may add Qt5 support in the future, but Qt5 support was dropped in May 2023, so it is probably best for you to update :)
+**NOTE:** This addon is only availabile for Anki 23.12.1+. For whatever reason, some older versions do not work and I do not have the time right now to try on multiple old versions. Support may come in the future.
 
 ## Installation
 ### AnkiWeb
