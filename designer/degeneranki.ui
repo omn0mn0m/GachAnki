@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>degenerankiWidget</class>
+ <widget class="QWidget" name="degenerankiWidget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1212</width>
+    <height>800</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Degeneranki</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="rollImageLabel">
+     <property name="text">
+      <string/>
+     </property>
+     <property name="pixmap">
+      <pixmap>../src/degeneranki/res/wish-background.jpg</pixmap>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QPushButton" name="rollButton">
+       <property name="text">
+        <string>Roll (Cost: 100 Gacha Points)</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QToolButton" name="inventoryButton">
+       <property name="text">
+        <string>Inventory</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QToolButton" name="settingsButton">
+       <property name="text">
+        <string>Settings</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLabel" name="gachaPointsLabel">
+       <property name="text">
+        <string>Gacha Points: 0</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="pity4StarsLabel">
+       <property name="text">
+        <string>4-Star Pity: 0</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="pity5StarsLabel">
+       <property name="text">
+        <string>5-Star Pity: 0</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="lifetimeRollsLabel">
+       <property name="text">
+        <string>Lifetime Rolls: 0</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

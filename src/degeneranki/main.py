@@ -131,7 +131,7 @@ class GachaWidget(QWidget):
 
 def showWidget() -> None:
     mw.myWidget = widget = GachaWidget()
-    widget.resize(1000, 900)
+    widget.resize(1280, 900)
     widget.show()
 
 def on_answer_button(reviewer, card, ease) -> None:
