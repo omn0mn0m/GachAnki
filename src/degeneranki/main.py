@@ -6,6 +6,7 @@ from enum import Enum
 
 from .gacha import GachaMachine
 from .database import Database
+from .api.ambr import Weapon, Character
 
 # import the main window object (mw) from aqt
 from aqt import gui_hooks, mw
@@ -40,14 +41,21 @@ class DegenerankiWidget(QTabWidget):
         self.weaponsTab = InventoryWidget(InventoryWidget.InventoryTypes.WEAPONS)
         self.addTab(self.weaponsTab, "Weapons")
 
+        self.gachaTab.character_roll_finished.connect(self.charactersTab.on_roll_finished)
+        self.gachaTab.weapon_roll_finished.connect(self.weaponsTab.on_roll_finished)
+
 class InventoryWidget(QScrollArea):
 
+    MAX_COL_ITEMS = 4
+
     class InventoryTypes(Enum):
-        WEAPONS = 0,
-        CHARACTERS = 1
+        WEAPONS = 'Weapon',
+        CHARACTERS = 'Character'
     
     def __init__(self, inventory_type, *args, **kwargs):
         super(InventoryWidget, self).__init__(*args, **kwargs)
+
+        self.inventory_type = inventory_type
         
         self.network_manager = QNetworkAccessManager()
         self.network_manager.finished.connect(self.on_finished)
@@ -57,12 +65,10 @@ class InventoryWidget(QScrollArea):
         self.setWidget(self.wrapper_widget)
         self.setWidgetResizable(True)
 
-        self.max_col_items = 4
-
         self.row = 0
         self.col = 0
 
-        self.grid_info = {}
+        self.grid_contents = []
 
         if inventory_type == InventoryWidget.InventoryTypes.WEAPONS:
             for i, data in enumerate(gacha.data.get_owned_weapons()):
@@ -74,15 +80,18 @@ class InventoryWidget(QScrollArea):
                 self.add_to_grid(info)
 
     def add_to_grid(self, info):
-        request = QNetworkRequest(QUrl(info.icon))
-        self.network_manager.get(request)
+        if info not in self.grid_contents:
+            request = QNetworkRequest(QUrl(info.icon))
+            self.network_manager.get(request)
+            self.grid_contents.append(info)
 
     @pyqtSlot(QNetworkReply)
     def on_finished(self, reply):
         inventory_label = QLabel()
-        label_measure = self.width() // self.max_col_items
-        inventory_label.setFixedWidth(label_measure)
-        inventory_label.setFixedHeight(label_measure)
+        label_measure = self.width() // self.MAX_COL_ITEMS
+        inventory_label.setSizePolicy(QSizePolicy().Policy.Fixed, QSizePolicy().Policy.Fixed)
+        inventory_label.setFixedSize(label_measure, label_measure)
+        inventory_label.setMaximumSize(label_measure, label_measure)
         
         image = QImage()
         image.loadFromData(reply.readAll())
@@ -91,15 +100,22 @@ class InventoryWidget(QScrollArea):
         inventory_label.setPixmap(image_pixmap.scaled(inventory_label.size(), 
                                                       Qt.AspectRatioMode.KeepAspectRatio, 
                                                       Qt.TransformationMode.SmoothTransformation))
-        self.grid_layout.addWidget(inventory_label, self.row, self.col)
+        self.grid_layout.addWidget(inventory_label, self.row, self.col, Qt.AlignmentFlag.AlignHCenter)
 
         self.col += 1
 
-        if self.col == self.max_col_items:
+        if self.col == self.MAX_COL_ITEMS:
             self.col = 0
             self.row += 1
 
+    @pyqtSlot(Weapon)
+    @pyqtSlot(Character)
+    def on_roll_finished(self, roll):
+        self.add_to_grid(roll)
+
 class GachaWidget(QWidget):
+    weapon_roll_finished = pyqtSignal(Weapon)
+    character_roll_finished = pyqtSignal(Character)
     
     def __init__(self, *args, **kwargs):
         super(GachaWidget, self).__init__(*args, **kwargs)
@@ -195,8 +211,10 @@ class GachaWidget(QWidget):
         self.pity_4_star.setText("4-Star Pity: {}".format(gacha.data.pity_4_star))
         self.pity_5_star.setText("5-Star Pity: {}".format(gacha.data.pity_5_star))
 
-    def show_inventory(self):
-        pass
+        if type(roll) == Weapon:
+            self.weapon_roll_finished.emit(roll)
+        elif type(roll) == Character:
+            self.character_roll_finished.emit(roll)
 
     def show_white(self, roll_pixmap):
         self.roll_image.setPixmap(self.flash_bg_pixmap)
