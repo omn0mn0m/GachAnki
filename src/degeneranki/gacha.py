@@ -5,15 +5,12 @@ from enum import Enum
 from .api import ambr
 from .database import Database
 
-soft_pity_5_star = 75
-hard_pity_5_star = 90
-hard_pity_4_star = 10
-
-pull_rarities = (5, 4, 3)
-pull_base_weights = (1, 10, 190)
-pull_pity_weights = (1, 8, 53)
-
+# Based off https://www.hoyolab.com/article/497840
 class GachaMachine:
+    RATE_5_STAR = 0.006
+    PITY_5_STAR = 73
+    RATE_4_STAR = 0.051
+    PITY_4_STAR = 8
 
     def __init__(self):
         self.data = Database()
@@ -27,23 +24,16 @@ class GachaMachine:
         # Add 1 roll and remove gacha points
         self.data.lifetime_rolls = self.data.lifetime_rolls + 1
 
-        # Decide on rarity pull
-        if self.data.pity_5_star >= hard_pity_5_star - 1:
-            pull_rarity = 5
-        elif self.data.pity_4_star >= hard_pity_4_star - 1:
-            pull_rarity = 4
-        elif self.data.pity_5_star >= soft_pity_5_star - 1:
-            pull_rarity = random.choices(pull_rarities, pull_pity_weights)[0]
-        else:
-            pull_rarity = random.choices(pull_rarities, pull_base_weights)[0]
+        x = random.random() # 0.0 <= prob < 1.0
+        prob_5_star = self.RATE_5_STAR + max(0, ((self.data.pity_5_star + 1) - self.PITY_5_STAR) * 10 * self.RATE_5_STAR)
+        prob_4_star = self.RATE_4_STAR + max(0, ((self.data.pity_4_star + 1) - self.PITY_4_STAR) * 10 * self.RATE_4_STAR)
 
-        # Pull for the actual character/ weapon
-        if pull_rarity == 5:
+        if x < prob_5_star:
             pull = random.choice(self.rarity_sorted_characters[5])
             self.data.add_owned_character(pull.id)
-            
-            self.data.pity_5_star = 0 # Assuming 4 and 5 star pity are treated separately
-        elif pull_rarity == 4:
+            self.data.pity_5_star = 0
+            self.data.pity_4_star += 1
+        elif x < (prob_4_star + prob_5_star):
             if random.randint(0, 1):
                 pull = random.choice(self.rarity_sorted_characters[4])
                 self.data.add_owned_character(pull.id)
@@ -51,16 +41,14 @@ class GachaMachine:
                 pull = random.choice(self.rarity_sorted_weapons[4])
                 self.data.add_owned_weapon(pull.id)
 
-            self.data.pity_4_star = 0 # Assuming 4 and 5 star pity are treated separately
-            self.data.pity_5_star = self.data.pity_5_star + 1
-        elif pull_rarity == 3:
+            self.data.pity_5_star += 1
+            self.data.pity_4_star = 0
+        else:
             pull = random.choice(self.rarity_sorted_weapons[3])
             self.data.add_owned_weapon(pull.id)
 
-            self.data.pity_4_star = self.data.pity_4_star + 1
-            self.data.pity_5_star = self.data.pity_5_star + 1
-        else:
-            pass
+            self.data.pity_4_star += 1
+            self.data.pity_5_star += 1
 
         self.data.save()
         
