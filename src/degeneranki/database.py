@@ -1,6 +1,8 @@
 import json
 import sqlite3
 import sys
+
+from contextlib import closing
 from os import path
 
 from .api import ambr
@@ -8,8 +10,8 @@ from .api import ambr
 class Database:
 
     def __init__(self):
-        sys.path.insert(1, path.abspath(path.dirname(__file__)))
         root_project_dir = path.abspath(path.dirname(__file__))
+        sys.path.insert(1, root_project_dir)
         self.user_files_dir = path.join(root_project_dir, "user_files")
         
         if path.isfile(path.join(self.user_files_dir, "data.json")):
@@ -40,61 +42,69 @@ class Database:
         self.characters = ambr.get_characters()
         self.weapons = ambr.get_weapons()
 
-        # Load sqlite3 database data
-        self.conn = sqlite3.connect(path.join(root_project_dir, "user_files", "database.db"))
-        self.conn.cursor().execute(f"""
-        CREATE TABLE IF NOT EXISTS weapons
-        (id VARCHAR(32) NOT NULL PRIMARY KEY,
-        quantity INT DEFAULT 1);
-        """)
-        self.conn.cursor().execute(f"""
-        CREATE TABLE IF NOT EXISTS characters
-        (id VARCHAR(32) NOT NULL PRIMARY KEY,
-        quantity INT DEFAULT 1,
-        xp INT DEFAULT 0);
-        """)
+        # Creates tables if needed
+        with closing(sqlite3.connect(path.join(self.user_files_dir, "database.db"))) as connection:
+            with closing(connection.cursor()) as cursor:
+                cursor.execute(f"""
+                CREATE TABLE IF NOT EXISTS weapons
+                (id VARCHAR(32) NOT NULL PRIMARY KEY,
+                quantity INT DEFAULT 1);
+                """)
+                cursor.execute(f"""
+                CREATE TABLE IF NOT EXISTS characters
+                (id VARCHAR(32) NOT NULL PRIMARY KEY,
+                quantity INT DEFAULT 1,
+                xp INT DEFAULT 0);
+                """)
 
     def get_owned_characters(self):
-        return self.conn.cursor().execute("SELECT * FROM characters").fetchall()
+        with closing(sqlite3.connect(path.join(self.user_files_dir, "database.db"))) as connection:
+            with closing(connection.cursor()) as cursor:
+                return cursor.execute("SELECT * FROM characters").fetchall()
         
     def get_owned_weapons(self):
-        return self.conn.cursor().execute("SELECT * FROM weapons").fetchall()
+        with closing(sqlite3.connect(path.join(self.user_files_dir, "database.db"))) as connection:
+            with closing(connection.cursor()) as cursor:
+                return cursor.execute("SELECT * FROM weapons").fetchall()
 
     def add_owned_character(self, character_id):
         parameters = {
             'id': character_id,
         }
-        self.conn.cursor().execute("""INSERT INTO characters (id)
-        VALUES (:id)
-        ON CONFLICT (id)
-        DO UPDATE SET quantity = quantity + 1
-        """, parameters)
-        self.conn.commit()
+        with closing(sqlite3.connect(path.join(self.user_files_dir, "database.db"))) as connection:
+            with closing(connection.cursor()) as cursor:
+                cursor.execute("""INSERT INTO characters (id)
+                VALUES (:id)
+                ON CONFLICT (id)
+                DO UPDATE SET quantity = quantity + 1
+                """, parameters)
+                connection.commit()
 
     def increment_character_xp(self, character_id, xp):
         parameters = {
             'xp': xp,
             'id': character_id,
         }
-        self.conn.cursor().execute("""UPDATE characters
-        SET xp = xp + :xp
-        WHERE id = :id
-        """, parameters)
-        self.conn.commit()
+        with closing(sqlite3.connect(path.join(self.user_files_dir, "database.db"))) as connection:
+            with closing(connection.cursor()) as cursor:
+                cursor.execute("""UPDATE characters
+                SET xp = xp + :xp
+                WHERE id = :id
+                """, parameters)
+                connection.commit()
 
     def add_owned_weapon(self, weapon_id):
         parameters = {
             'id': weapon_id,
         }
-        self.conn.cursor().execute("""INSERT INTO weapons (id)
-        VALUES (:id)
-        ON CONFLICT (id)
-        DO UPDATE SET quantity = quantity + 1
-        """, parameters)
-        self.conn.commit()
-        
-    def own_weapons(self, weapon_id):
-        pass
+        with closing(sqlite3.connect(path.join(self.user_files_dir, "database.db"))) as connection:
+            with closing(connection.cursor()) as cursor:
+                cursor.execute("""INSERT INTO weapons (id)
+                VALUES (:id)
+                ON CONFLICT (id)
+                DO UPDATE SET quantity = quantity + 1
+                """, parameters)
+                connection.commit()
 
     def save(self):
         data = {

@@ -181,8 +181,8 @@ class GachaWidget(QWidget):
             image.loadFromData(http.request("GET", roll.icon).data)
         image_pixmap = QPixmap(image)
         image_pixmap = image_pixmap.scaled(
-            max(480, image_pixmap.width()), # max(480, min(image_pixmap.width(), MAX_ROLL_IMAGE_WIDTH)),
-            max(480, image_pixmap.height()), # max(480, min(image_pixmap.height(), MAX_ROLL_IMAGE_HEIGHT)),
+            max(480, image_pixmap.width()), # ambr images have too much horizontal whitespace
+            max(480, MAX_ROLL_IMAGE_HEIGHT),
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation)
 
