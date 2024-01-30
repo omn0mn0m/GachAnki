@@ -27,11 +27,17 @@ sys.path.insert(1, path.abspath(path.dirname(__file__)))
 root_project_dir = path.abspath(path.dirname(__file__))
 res_files_dir = path.join(root_project_dir, "res")
 
+class Franchise(Enum):
+    GENSHIN_IMPACT = 'Genshin Impact'
+    HONKAI_STAR_RAIL = 'Honkai Star Rail (Coming Soon)'
+    PROJECT_SEKAI = 'Project Sekai (Coming Soon)'
+    BANG_DREAM = 'Bang Dream: Girls Band Party (Coming Soon)'
+
 class DegenerankiWidget(QTabWidget):
     
     def __init__(self, *args, **kwargs):
         super(DegenerankiWidget, self).__init__(*args, **kwargs)
-
+        
         self.gachaTab = GachaWidget()
         self.addTab(self.gachaTab, "Gacha")
 
@@ -41,8 +47,132 @@ class DegenerankiWidget(QTabWidget):
         self.weaponsTab = InventoryWidget(InventoryWidget.InventoryTypes.WEAPONS)
         self.addTab(self.weaponsTab, "Weapons")
 
+        self.settingsTab = SettingsWidget()
+        self.addTab(self.settingsTab, "Settings")
+
         self.gachaTab.character_roll_finished.connect(self.charactersTab.on_roll_finished)
         self.gachaTab.weapon_roll_finished.connect(self.weaponsTab.on_roll_finished)
+
+class SettingsWidget(QWidget):
+    
+    def __init__(self, *args, **kwargs):
+        super(SettingsWidget, self).__init__(*args, **kwargs)
+
+        self.layout = QVBoxLayout(self)
+
+        hlayout = QHBoxLayout()
+        self.layout.addLayout(hlayout)
+
+        account_groupbox = QGroupBox("Account")
+        account_hlayout = QHBoxLayout(account_groupbox)
+
+        login_form_vertical_layout = QVBoxLayout()
+        account_hlayout.addLayout(login_form_vertical_layout)
+
+        login_form = QFormLayout()
+        self.email_edit = QLineEdit()
+        login_form.addRow("Email", self.email_edit)
+        self.password_edit = QLineEdit()
+        login_form.addRow("Password", self.password_edit)
+        login_form_vertical_layout.addLayout(login_form)
+
+        login_buttons_layout = QHBoxLayout()
+        self.sign_up_button = QPushButton("Sign Up")
+        login_buttons_layout.addWidget(self.sign_up_button)
+        self.sign_up_button.clicked.connect(self.sign_up)
+
+        self.log_in_button = QPushButton("Log In")
+        login_buttons_layout.addWidget(self.log_in_button)
+        self.log_in_button.clicked.connect(self.log_in)
+
+        self.log_out_button = QPushButton("Log Out")
+        self.log_out_button.setEnabled(False)
+        login_buttons_layout.addWidget(self.log_out_button)
+        self.log_out_button.clicked.connect(self.log_out)
+
+        login_form_vertical_layout.addLayout(login_buttons_layout)
+
+        STATS_LABEL_WIDTH = 150
+        account_stats_groupbox = QGroupBox("Account Stats")
+        account_stats_layout = QVBoxLayout(account_stats_groupbox)
+        self.lifetime_pity_label = QLabel("Lifetime Pity: {}".format(gacha.data.lifetime_rolls))
+        self.lifetime_pity_label.setMinimumWidth(STATS_LABEL_WIDTH)
+        account_stats_layout.addWidget(self.lifetime_pity_label)
+        self.pity_4_star_label = QLabel("4-Star Pity: {}".format(gacha.data.pity_4_star))
+        self.pity_4_star_label.setMinimumWidth(STATS_LABEL_WIDTH)
+        account_stats_layout.addWidget(self.pity_4_star_label)
+        self.pity_5_star_label = QLabel("5-Star Pity: {}".format(gacha.data.pity_5_star))
+        self.pity_5_star_label.setMinimumWidth(STATS_LABEL_WIDTH)
+        account_stats_layout.addWidget(self.pity_5_star_label)
+
+        hlayout.addWidget(account_groupbox)
+        hlayout.addWidget(account_stats_groupbox)
+        
+        franchise_groupbox = QGroupBox("Enable or Disable Franchises")
+        franchise_vlayout = QVBoxLayout(franchise_groupbox)
+        
+        for franchise in Franchise:
+            franchise_vlayout.addWidget(QCheckBox(franchise.value))
+
+        self.layout.addWidget(franchise_groupbox)
+
+        settings_buttons_layout = QHBoxLayout()
+        
+        self.save_settings_button = QPushButton("Save Settings")
+        settings_buttons_layout.addWidget(self.save_settings_button)
+        self.save_settings_button.clicked.connect(self.save_config)
+        
+        self.revert_settings_button = QPushButton("Revert Settings")
+        settings_buttons_layout.addWidget(self.revert_settings_button)
+        self.revert_settings_button.clicked.connect(self.load_config)
+        
+        self.layout.addLayout(settings_buttons_layout)
+        
+        vertical_spacer = QSpacerItem(20,
+                                      40,
+                                      QSizePolicy().Policy.Minimum,
+                                      QSizePolicy().Policy.Expanding,)
+        self.layout.addSpacerItem(vertical_spacer)
+
+        self.load_config()
+
+    def sign_up(self):
+        response = gacha.data.account_signup(self.email_edit.text(), self.password_edit.text())
+
+        if response.user.aud == 'authenticated':
+            self.sign_up_button.setEnabled(False)
+            self.log_in_button.setEnabled(False)
+            self.log_out_button.setEnabled(True)
+
+            config = mw.addonManager.getConfig("degeneranki.py")
+            config['email'] = self.email_edit.text()
+            config['password'] = self.password_edit.text()
+            mw.addonManager.writeConfig("degeneranki.py", config)
+
+    def log_in(self):
+        data = gacha.data.account_login(self.email_edit.text(), self.password_edit.text())
+        
+        if data.user.aud == 'authenticated':
+            self.sign_up_button.setEnabled(False)
+            self.log_in_button.setEnabled(False)
+            self.log_out_button.setEnabled(True)
+
+            config = mw.addonManager.getConfig("degeneranki.py")
+            config['email'] = self.email_edit.text()
+            config['password'] = self.password_edit.text()
+            mw.addonManager.writeConfig("degeneranki.py", config)
+
+    def log_out(self):
+        response = gacha.data.account_signout()
+        self.sign_up_button.setEnabled(True)
+        self.log_in_button.setEnabled(True)
+        self.log_out_button.setEnabled(False)
+
+    def load_config(self):
+        config = mw.addonManager.getConfig("degeneranki.py")
+
+    def save_config(self):
+        mw.addonManager.writeConfig("degeneranki.py", config)
 
 class InventoryWidget(QScrollArea):
 
@@ -153,15 +283,6 @@ class GachaWidget(QWidget):
 
         self.gacha_points = QLabel("Gacha Points Left: {}".format(gacha.data.gacha_points))
         self.roll_stats_layout.addWidget(self.gacha_points)
-
-        self.lifetime_rolls = QLabel("Lifetime Rolls: {}".format(gacha.data.lifetime_rolls))
-        self.roll_stats_layout.addWidget(self.lifetime_rolls)
-
-        self.pity_4_star = QLabel("4-Star Pity: {}".format(gacha.data.pity_4_star))
-        self.roll_stats_layout.addWidget(self.pity_4_star)
-
-        self.pity_5_star = QLabel("5-Star Pity: {}".format(gacha.data.pity_5_star))
-        self.roll_stats_layout.addWidget(self.pity_5_star)
 
     def roll(self) -> None:
         self.roll_image.setPixmap(self.wish_bg_pixmap)

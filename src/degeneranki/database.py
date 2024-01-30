@@ -1,10 +1,15 @@
 import json
+import logging
+import os
 import sqlite3
 import sys
 
 from contextlib import closing
 from os import path
 
+logging.basicConfig(level=logging.WARNING)
+
+from ._vendor.supabase import create_client, Client
 from .api import ambr
 
 class Database:
@@ -13,6 +18,13 @@ class Database:
         root_project_dir = path.abspath(path.dirname(__file__))
         sys.path.insert(1, root_project_dir)
         self.user_files_dir = path.join(root_project_dir, "user_files")
+
+        # Default to public Supabase credentials
+        url = os.environ.get('SUPABASE_URL', 
+                             'https://fsasczgnagdnyclkdvyk.supabase.co')
+        key = os.environ.get('SUPABASE_KEY', 
+                             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzYXNjemduYWdkbnljbGtkdnlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDU5ODEyMzYsImV4cCI6MjAyMTU1NzIzNn0.L2A-5o50ikk8PdV1xVseRbth9Rk45HaiwQNebkitBCY')
+        self.supabase: Client = create_client(url, key)
         
         if path.isfile(path.join(self.user_files_dir, "data.json")):
             # Load json data
@@ -56,6 +68,24 @@ class Database:
                 quantity INT DEFAULT 1,
                 xp INT DEFAULT 0);
                 """)
+
+    def account_signup(self, email, password):
+        response = self.supabase.auth.sign_up({
+            "email": email,
+            "password": password,
+        })
+        return response
+
+    def account_login(self, email, password):
+        data = self.supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password,
+        })
+        return data
+
+    def account_signout(self):
+        response = self.supabase.auth.sign_out()
+        return response
 
     def get_owned_characters(self):
         with closing(sqlite3.connect(path.join(self.user_files_dir, "database.db"))) as connection:
