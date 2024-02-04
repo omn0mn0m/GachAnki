@@ -44,14 +44,14 @@ class DegenerankiWidget(QTabWidget):
         self.charactersTab = InventoryWidget(InventoryWidget.InventoryTypes.CHARACTERS)
         self.addTab(self.charactersTab, "Characters")
 
-        self.weaponsTab = InventoryWidget(InventoryWidget.InventoryTypes.WEAPONS)
-        self.addTab(self.weaponsTab, "Weapons")
+        # self.weaponsTab = InventoryWidget(InventoryWidget.InventoryTypes.WEAPONS)
+        # self.addTab(self.weaponsTab, "Weapons")
 
         self.settingsTab = SettingsWidget()
         self.addTab(self.settingsTab, "Settings")
 
         self.gachaTab.character_roll_finished.connect(self.charactersTab.on_roll_finished)
-        self.gachaTab.weapon_roll_finished.connect(self.weaponsTab.on_roll_finished)
+        #self.gachaTab.weapon_roll_finished.connect(self.weaponsTab.on_roll_finished)
 
 class SettingsWidget(QWidget):
     
@@ -95,15 +95,20 @@ class SettingsWidget(QWidget):
         STATS_LABEL_WIDTH = 150
         account_stats_groupbox = QGroupBox("Account Stats")
         account_stats_layout = QVBoxLayout(account_stats_groupbox)
-        self.lifetime_pity_label = QLabel("Lifetime Pity: {}".format(gacha.data.lifetime_rolls))
+        self.lifetime_pity_label = QLabel("Lifetime Pity: Unknown")
         self.lifetime_pity_label.setMinimumWidth(STATS_LABEL_WIDTH)
         account_stats_layout.addWidget(self.lifetime_pity_label)
-        self.pity_4_star_label = QLabel("4-Star Pity: {}".format(gacha.data.pity_4_star))
+        self.pity_4_star_label = QLabel("4-Star Pity: Unknown")
         self.pity_4_star_label.setMinimumWidth(STATS_LABEL_WIDTH)
         account_stats_layout.addWidget(self.pity_4_star_label)
-        self.pity_5_star_label = QLabel("5-Star Pity: {}".format(gacha.data.pity_5_star))
+        self.pity_5_star_label = QLabel("5-Star Pity: Unknown")
         self.pity_5_star_label.setMinimumWidth(STATS_LABEL_WIDTH)
         account_stats_layout.addWidget(self.pity_5_star_label)
+        
+        if gacha.data.is_logged_in():
+            self.lifetime_pity_label.setText("Lifetime Pity: {}".format(gacha.data.lifetime_rolls))
+            self.pity_4_star_label.setText("4-Star Pity: {}".format(gacha.data.pity_4_star))
+            self.pity_5_star_label.setText("5-Star Pity: {}".format(gacha.data.pity_5_star))
 
         hlayout.addWidget(account_groupbox)
         hlayout.addWidget(account_stats_groupbox)
@@ -149,6 +154,10 @@ class SettingsWidget(QWidget):
             config['password'] = self.password_edit.text()
             mw.addonManager.writeConfig("degeneranki.py", config)
 
+            self.lifetime_pity_label.setText("Lifetime Pity: {}".format(gacha.data.lifetime_rolls))
+            self.pity_4_star_label.setText("4-Star Pity: {}".format(gacha.data.pity_4_star))
+            self.pity_5_star_label.setText("5-Star Pity: {}".format(gacha.data.pity_5_star))
+
     def log_in(self):
         data = gacha.data.account_login(self.email_edit.text(), self.password_edit.text())
         
@@ -162,6 +171,10 @@ class SettingsWidget(QWidget):
             config['password'] = self.password_edit.text()
             mw.addonManager.writeConfig("degeneranki.py", config)
 
+            self.lifetime_pity_label.setText("Lifetime Pity: {}".format(gacha.data.lifetime_rolls))
+            self.pity_4_star_label.setText("4-Star Pity: {}".format(gacha.data.pity_4_star))
+            self.pity_5_star_label.setText("5-Star Pity: {}".format(gacha.data.pity_5_star))
+
     def log_out(self):
         response = gacha.data.account_signout()
         self.sign_up_button.setEnabled(True)
@@ -173,6 +186,11 @@ class SettingsWidget(QWidget):
 
     def save_config(self):
         mw.addonManager.writeConfig("degeneranki.py", config)
+
+    @pyqtSlot(Weapon)
+    @pyqtSlot(Character)
+    def on_roll_finished(self, roll):
+        self.add_to_grid(roll)
 
 class InventoryWidget(QScrollArea):
 
@@ -195,6 +213,9 @@ class InventoryWidget(QScrollArea):
         self.setWidget(self.wrapper_widget)
         self.setWidgetResizable(True)
 
+        self.fill_grid(inventory_type)
+
+    def fill_grid(self, inventory_type):
         self.row = 0
         self.col = 0
 
@@ -202,11 +223,11 @@ class InventoryWidget(QScrollArea):
 
         if inventory_type == InventoryWidget.InventoryTypes.WEAPONS:
             for i, data in enumerate(gacha.data.get_owned_weapons()):
-                info = gacha.data.weapons[data[0]]
+                info = gacha.data.weapons[data['items']['lookup_id']]
                 self.add_to_grid(info)
         elif inventory_type == InventoryWidget.InventoryTypes.CHARACTERS:
             for i, data in enumerate(gacha.data.get_owned_characters()):
-                info = gacha.data.characters[data[0]]
+                info = gacha.data.characters[data['items']['lookup_id']]
                 self.add_to_grid(info)
 
     def add_to_grid(self, info):
@@ -281,7 +302,11 @@ class GachaWidget(QWidget):
         self.roll_stats_layout = QHBoxLayout()
         self.layout.addLayout(self.roll_stats_layout)
 
-        self.gacha_points = QLabel("Gacha Points Left: {}".format(gacha.data.gacha_points))
+        self.gacha_points = QLabel("Gacha Points Left: Unknown")
+
+        if gacha.data.is_logged_in():
+            self.gacha_points.setText("Gacha Points Left: {}".format(gacha.data.gacha_points))
+
         self.roll_stats_layout.addWidget(self.gacha_points)
 
     def roll(self) -> None:
@@ -327,10 +352,10 @@ class GachaWidget(QWidget):
         self.timer.timeout.connect(timer_callback)
         self.timer.start(150)
         
-        # Update roll counts
-        self.lifetime_rolls.setText("Lifetime Rolls: {}".format(gacha.data.lifetime_rolls))
-        self.pity_4_star.setText("4-Star Pity: {}".format(gacha.data.pity_4_star))
-        self.pity_5_star.setText("5-Star Pity: {}".format(gacha.data.pity_5_star))
+        # # Update roll counts
+        # self.lifetime_rolls.setText("Lifetime Rolls: {}".format(gacha.data.lifetime_rolls))
+        # self.pity_4_star.setText("4-Star Pity: {}".format(gacha.data.pity_4_star))
+        # self.pity_5_star.setText("5-Star Pity: {}".format(gacha.data.pity_5_star))
 
         if type(roll) == Weapon:
             self.weapon_roll_finished.emit(roll)
@@ -357,11 +382,13 @@ def showWidget() -> None:
 
 def on_answer_button(reviewer, card, ease) -> None:
     if ease == 3 or ease == 4: # Good or Easy
-        gacha.data.gacha_points = gacha.data.gacha_points + 1
+        gacha.data.gacha_points += 1
     else:
         pass
 
+def on_quit() -> None:
     gacha.data.save()
+    response = gacha.data.account_signout()
 
 # create a new menu item, "test"
 action = QAction("Degeneranki", mw)
@@ -372,3 +399,4 @@ mw.form.menuTools.addAction(action)
 
 # Hooks
 gui_hooks.reviewer_did_answer_card.append(on_answer_button)
+gui_hooks.profile_will_close.append(on_quit)

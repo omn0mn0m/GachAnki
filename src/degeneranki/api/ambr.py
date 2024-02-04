@@ -32,11 +32,12 @@ def sort_by_rarity(items):
 # === Characters ===
 @dataclass
 class Character:
-    id: str
+    id: int
     name: str
     rarity: int
     icon: str
     gacha: str
+    party: str
 
 def get_characters() -> dict:
     response = _request_data("avatar")
@@ -44,12 +45,13 @@ def get_characters() -> dict:
     characters = {}
 
     for id, data in response['items'].items():
-        characters[id] = Character(id = data['id'],
-                                   name = data['name'],
-                                   rarity = data['rank'],
-                                   icon = image_url.format(data['icon']),
-                                   gacha = image_url.format(data['icon']).replace('AvatarIcon', 'Gacha_AvatarImg'),
-                                   )
+        characters[int(id.split('-')[0])] = Character(id = data['id'],
+                                        name = data['name'],
+                                        rarity = data['rank'],
+                                        icon = image_url.format(data['icon']),
+                                        gacha = image_url.format(data['icon']).replace('AvatarIcon', 'Gacha_AvatarImg'),
+                                        party = ''
+                                        )
 
     return characters
 

@@ -22,7 +22,7 @@ class GachaMachine:
         roll = {}
 
         # Add 1 roll and remove gacha points
-        self.data.lifetime_rolls = self.data.lifetime_rolls + 1
+        self.data.lifetime_rolls += 1
 
         x = random.random() # 0.0 <= prob < 1.0
         prob_5_star = self.RATE_5_STAR + max(0, ((self.data.pity_5_star + 1) - self.PITY_5_STAR) * 10 * self.RATE_5_STAR)
@@ -30,26 +30,26 @@ class GachaMachine:
 
         if x < prob_5_star:
             pull = random.choice(self.rarity_sorted_characters[5])
-            self.data.add_owned_character(pull.id)
+            self.data.add_owned_character(pull, 'GENSHIN_IMPACT')
             self.data.pity_5_star = 0
             self.data.pity_4_star += 1
         elif x < (prob_4_star + prob_5_star):
             if random.randint(0, 1):
                 pull = random.choice(self.rarity_sorted_characters[4])
-                self.data.add_owned_character(pull.id)
+                self.data.add_owned_character(pull, 'GENSHIN_IMPACT')
             else:
                 pull = random.choice(self.rarity_sorted_weapons[4])
-                self.data.add_owned_weapon(pull.id)
+                pull.name = 'Pity Fodder'
+                #self.data.add_owned_weapon(pull.id)
 
             self.data.pity_5_star += 1
             self.data.pity_4_star = 0
         else:
             pull = random.choice(self.rarity_sorted_weapons[3])
-            self.data.add_owned_weapon(pull.id)
+            pull.name = 'Pity Fodder'
+            #self.data.add_owned_weapon(pull.id)
 
             self.data.pity_4_star += 1
             self.data.pity_5_star += 1
-
-        self.data.save()
         
         return pull

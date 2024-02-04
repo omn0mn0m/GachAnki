@@ -1,0 +1,47 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://example.com/inventory.schema.json",
+    "title": "Inventory",
+    "description": "Pretty generic inventory format",
+    
+    "type": "object",
+    "properties": {
+        "characters": {
+            "description": "Dictionary of characters owned in inventory, sorted by rarity",
+            "type": "object",
+            "properties": {
+                "$comment": "This dictionary of rarities can be adjusted based on what the game uses",
+                "4": {
+                    "description": "List of 4-star characters"
+                    "type": "array",
+                    "items": { "$ref": "#/$defs/character" },
+                    "uniqueItems": true
+                },
+                "5": {
+                    "description": "List of 5-star characters"
+                    "type": "array",
+                    "items": { "$ref": "#/$defs/character" },
+                    "uniqueItems": true
+                }
+            }
+        }
+    }
+    "required": [ "characters" ]
+
+    "$defs": {
+        "character": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "Lookup ID for character",
+                    "type": "string"
+                },
+                "quantity": {
+                    "description": "Amount of that character in the inventory",
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        }
+    }
+}
