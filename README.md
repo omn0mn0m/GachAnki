@@ -23,7 +23,7 @@ To create an account:
 3. Click "Sign Up"
 
 ## Account Deletion
-Accounts deletion can be requested by emailing me at (me@omn0mn0m.com)[mailto:me@omn0mn0m.com].
+Accounts deletion can be requested by emailing me at [me@omn0mn0m.com](mailto:me@omn0mn0m.com).
 
 ### Gacha Points
 Gacha points are the currency used to roll for characters/ weapons. They are earned automatically when you answer a card as "Good" or "Easy".
