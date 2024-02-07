@@ -49,6 +49,9 @@ class DegenerankiWidget(QTabWidget):
         self.gachaTab.character_roll_finished.connect(self.charactersTab.on_roll_finished)
         #self.gachaTab.weapon_roll_finished.connect(self.weaponsTab.on_roll_finished)
 
+        self.gachaTab.character_roll_finished.connect(self.settingsTab.on_roll_finished)
+        self.gachaTab.weapon_roll_finished.connect(self.settingsTab.on_roll_finished)
+
         self.settingsTab.loaded.connect(self.on_settings_loaded)
         self.settingsTab.loaded.connect(self.gachaTab.on_settings_loaded)
         self.settingsTab.loaded.connect(self.charactersTab.on_settings_loaded)
@@ -69,6 +72,9 @@ class DegenerankiWidget(QTabWidget):
         if gacha.data.is_logged_in():
             self.setTabEnabled(self.gacha_tab_index, True)
             self.setTabEnabled(self.characters_tab_index, True)
+        else:
+            self.setTabEnabled(self.gacha_tab_index, False)
+            self.setTabEnabled(self.characters_tab_index, False)
             self.setCurrentIndex(self.settings_tab_index)
 
 class SettingsWidget(QWidget):
@@ -194,8 +200,8 @@ class SettingsWidget(QWidget):
             mw.addonManager.writeConfig("degeneranki.py", config)
 
             self.update_account_stats(gacha.data.lifetime_rolls, 
-                                 gacha.data.pity_4_star, 
-                                 gacha.data.pity_5_star)
+                                      gacha.data.pity_4_star, 
+                                      gacha.data.pity_5_star)
 
             self.loaded.emit()
 
@@ -243,7 +249,9 @@ class SettingsWidget(QWidget):
     @pyqtSlot(Weapon)
     @pyqtSlot(Character)
     def on_roll_finished(self, roll) -> None:
-        pass
+        self.update_account_stats(gacha.data.lifetime_rolls, 
+                                  gacha.data.pity_4_star, 
+                                  gacha.data.pity_5_star)
 
 class InventoryWidget(QScrollArea):
 
@@ -448,10 +456,11 @@ def showWidget() -> None:
     widget.show()
 
 def on_answer_button(reviewer, card, ease) -> None:
-    if ease == 3 or ease == 4: # Good or Easy
-        gacha.data.gacha_points += 1
-    else:
-        pass
+    if gacha.data.is_logged_in():
+        if ease == 3 or ease == 4: # Good or Easy
+            gacha.data.gacha_points += 1
+        else:
+            pass
 
 def on_profile_open() -> None:
     config = mw.addonManager.getConfig("degeneranki.py")
