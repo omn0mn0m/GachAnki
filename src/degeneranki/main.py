@@ -27,6 +27,8 @@ sys.path.insert(1, path.abspath(path.dirname(__file__)))
 root_project_dir = path.abspath(path.dirname(__file__))
 res_files_dir = path.join(root_project_dir, "res")
 
+config = mw.addonManager.getConfig("degeneranki.py") # initial load
+
 class Franchise(Enum):
     GENSHIN_IMPACT = 'Genshin Impact'
     HONKAI_STAR_RAIL = 'Honkai Star Rail (Coming Soon)'
@@ -38,22 +40,39 @@ class DegenerankiWidget(QTabWidget):
     def __init__(self, *args, **kwargs):
         super(DegenerankiWidget, self).__init__(*args, **kwargs)
         
-        self.gachaTab = GachaWidget()
-        self.addTab(self.gachaTab, "Gacha")
-
-        self.charactersTab = InventoryWidget(InventoryWidget.InventoryTypes.CHARACTERS)
-        self.addTab(self.charactersTab, "Characters")
-
-        # self.weaponsTab = InventoryWidget(InventoryWidget.InventoryTypes.WEAPONS)
-        # self.addTab(self.weaponsTab, "Weapons")
-
         self.settingsTab = SettingsWidget()
-        self.addTab(self.settingsTab, "Settings")
+        self.gachaTab = GachaWidget()
+        self.charactersTab = InventoryWidget(InventoryWidget.InventoryTypes.CHARACTERS)
+        # self.weaponsTab = InventoryWidget(InventoryWidget.InventoryTypes.WEAPONS)
 
+        # Signals and slots
         self.gachaTab.character_roll_finished.connect(self.charactersTab.on_roll_finished)
         #self.gachaTab.weapon_roll_finished.connect(self.weaponsTab.on_roll_finished)
 
+        self.settingsTab.loaded.connect(self.on_settings_loaded)
+        self.settingsTab.loaded.connect(self.gachaTab.on_settings_loaded)
+        self.settingsTab.loaded.connect(self.charactersTab.on_settings_loaded)
+        
+        # Add tabs
+        self.gacha_tab_index = self.addTab(self.gachaTab, "Gacha")
+        self.characters_tab_index = self.addTab(self.charactersTab, "Characters")
+        # self.addTab(self.weaponsTab, "Weapons")
+        self.settings_tab_index = self.addTab(self.settingsTab, "Settings")
+
+        if not gacha.data.is_logged_in():
+            self.setTabEnabled(self.gacha_tab_index, False)
+            self.setTabEnabled(self.characters_tab_index, False)
+            self.setCurrentIndex(self.settings_tab_index)
+
+    @pyqtSlot()
+    def on_settings_loaded(self) -> None:
+        if gacha.data.is_logged_in():
+            self.setTabEnabled(self.gacha_tab_index, True)
+            self.setTabEnabled(self.characters_tab_index, True)
+            self.setCurrentIndex(self.settings_tab_index)
+
 class SettingsWidget(QWidget):
+    loaded = pyqtSignal()
     
     def __init__(self, *args, **kwargs):
         super(SettingsWidget, self).__init__(*args, **kwargs)
@@ -69,13 +88,14 @@ class SettingsWidget(QWidget):
         login_form_vertical_layout = QVBoxLayout()
         account_hlayout.addLayout(login_form_vertical_layout)
 
+        # Create sign up form
         login_form = QFormLayout()
         self.email_edit = QLineEdit()
         login_form.addRow("Email", self.email_edit)
         self.password_edit = QLineEdit()
         login_form.addRow("Password", self.password_edit)
         login_form_vertical_layout.addLayout(login_form)
-
+        
         login_buttons_layout = QHBoxLayout()
         self.sign_up_button = QPushButton("Sign Up")
         login_buttons_layout.addWidget(self.sign_up_button)
@@ -92,34 +112,33 @@ class SettingsWidget(QWidget):
 
         login_form_vertical_layout.addLayout(login_buttons_layout)
 
+        # Create account stats groupbox
         STATS_LABEL_WIDTH = 150
         account_stats_groupbox = QGroupBox("Account Stats")
         account_stats_layout = QVBoxLayout(account_stats_groupbox)
+
         self.lifetime_pity_label = QLabel("Lifetime Pity: Unknown")
         self.lifetime_pity_label.setMinimumWidth(STATS_LABEL_WIDTH)
         account_stats_layout.addWidget(self.lifetime_pity_label)
+
         self.pity_4_star_label = QLabel("4-Star Pity: Unknown")
         self.pity_4_star_label.setMinimumWidth(STATS_LABEL_WIDTH)
         account_stats_layout.addWidget(self.pity_4_star_label)
+
         self.pity_5_star_label = QLabel("5-Star Pity: Unknown")
         self.pity_5_star_label.setMinimumWidth(STATS_LABEL_WIDTH)
         account_stats_layout.addWidget(self.pity_5_star_label)
-        
-        if gacha.data.is_logged_in():
-            self.lifetime_pity_label.setText("Lifetime Pity: {}".format(gacha.data.lifetime_rolls))
-            self.pity_4_star_label.setText("4-Star Pity: {}".format(gacha.data.pity_4_star))
-            self.pity_5_star_label.setText("5-Star Pity: {}".format(gacha.data.pity_5_star))
 
         hlayout.addWidget(account_groupbox)
         hlayout.addWidget(account_stats_groupbox)
         
-        franchise_groupbox = QGroupBox("Enable or Disable Franchises")
-        franchise_vlayout = QVBoxLayout(franchise_groupbox)
+        self.franchise_groupbox = QGroupBox("Enable or Disable Franchises")
+        franchise_vlayout = QVBoxLayout(self.franchise_groupbox)
         
         for franchise in Franchise:
             franchise_vlayout.addWidget(QCheckBox(franchise.value))
 
-        self.layout.addWidget(franchise_groupbox)
+        self.layout.addWidget(self.franchise_groupbox)
 
         settings_buttons_layout = QHBoxLayout()
         
@@ -141,6 +160,11 @@ class SettingsWidget(QWidget):
 
         self.load_config()
 
+    def update_account_stats(self, lifetime_rolls, pity_4_star, pity_5_star):
+        self.lifetime_pity_label.setText(f"Lifetime Pity: {lifetime_rolls}")
+        self.pity_4_star_label.setText(f"4-Star Pity: {pity_4_star}")
+        self.pity_5_star_label.setText(f"5-Star Pity: {pity_5_star}")
+
     def sign_up(self):
         response = gacha.data.account_signup(self.email_edit.text(), self.password_edit.text())
 
@@ -148,17 +172,16 @@ class SettingsWidget(QWidget):
             self.sign_up_button.setEnabled(False)
             self.log_in_button.setEnabled(False)
             self.log_out_button.setEnabled(True)
-
-            config = mw.addonManager.getConfig("degeneranki.py")
+            
             config['email'] = self.email_edit.text()
             config['password'] = self.password_edit.text()
             mw.addonManager.writeConfig("degeneranki.py", config)
 
-            self.lifetime_pity_label.setText("Lifetime Pity: {}".format(gacha.data.lifetime_rolls))
-            self.pity_4_star_label.setText("4-Star Pity: {}".format(gacha.data.pity_4_star))
-            self.pity_5_star_label.setText("5-Star Pity: {}".format(gacha.data.pity_5_star))
+            self.update_account_stats('0', '0', '0') # new account should not have any stats yet
 
-    def log_in(self):
+            self.loaded.emit()
+
+    def log_in(self) -> None:
         data = gacha.data.account_login(self.email_edit.text(), self.password_edit.text())
         
         if data.user.aud == 'authenticated':
@@ -166,31 +189,61 @@ class SettingsWidget(QWidget):
             self.log_in_button.setEnabled(False)
             self.log_out_button.setEnabled(True)
 
-            config = mw.addonManager.getConfig("degeneranki.py")
             config['email'] = self.email_edit.text()
             config['password'] = self.password_edit.text()
             mw.addonManager.writeConfig("degeneranki.py", config)
 
-            self.lifetime_pity_label.setText("Lifetime Pity: {}".format(gacha.data.lifetime_rolls))
-            self.pity_4_star_label.setText("4-Star Pity: {}".format(gacha.data.pity_4_star))
-            self.pity_5_star_label.setText("5-Star Pity: {}".format(gacha.data.pity_5_star))
+            self.update_account_stats(gacha.data.lifetime_rolls, 
+                                 gacha.data.pity_4_star, 
+                                 gacha.data.pity_5_star)
 
-    def log_out(self):
+            self.loaded.emit()
+
+    def log_out(self) -> None:
         response = gacha.data.account_signout()
         self.sign_up_button.setEnabled(True)
         self.log_in_button.setEnabled(True)
         self.log_out_button.setEnabled(False)
 
-    def load_config(self):
-        config = mw.addonManager.getConfig("degeneranki.py")
-
-    def save_config(self):
+        config['email'] = ''
+        config['password'] = ''
         mw.addonManager.writeConfig("degeneranki.py", config)
+
+        self.email_edit.setText('')
+        self.password_edit.setText('')
+
+        self.update_account_stats('Unknown', 'Unknown', 'Unknown')
+
+        self.loaded.emit()
+
+    def load_config(self) -> None:
+        config = mw.addonManager.getConfig("degeneranki.py")
+        
+        # Load account
+        if config['email'] and config['password']:
+            self.email_edit.setText(config['email'])
+            self.password_edit.setText(config['password'])
+
+            self.log_in()
+
+        # Load franchise settings
+        for i, checkbox in enumerate(self.franchise_groupbox.findChildren(QCheckBox)):
+             checkbox.setChecked(config['franchises'][str(list(Franchise)[i]).split('.')[1]])
+
+        self.loaded.emit()
+
+    def save_config(self) -> None:
+        for i, checkbox in enumerate(self.franchise_groupbox.findChildren(QCheckBox)):
+            config['franchises'][str(list(Franchise)[i]).split('.')[1]] = checkbox.isChecked()
+        
+        mw.addonManager.writeConfig("degeneranki.py", config)
+
+        self.loaded.emit()
 
     @pyqtSlot(Weapon)
     @pyqtSlot(Character)
-    def on_roll_finished(self, roll):
-        self.add_to_grid(roll)
+    def on_roll_finished(self, roll) -> None:
+        pass
 
 class InventoryWidget(QScrollArea):
 
@@ -264,6 +317,10 @@ class InventoryWidget(QScrollArea):
     def on_roll_finished(self, roll):
         self.add_to_grid(roll)
 
+    @pyqtSlot()
+    def on_settings_loaded(self) -> None:
+        self.fill_grid(self.inventory_type)
+
 class GachaWidget(QWidget):
     weapon_roll_finished = pyqtSignal(Weapon)
     character_roll_finished = pyqtSignal(Character)
@@ -291,23 +348,28 @@ class GachaWidget(QWidget):
         
         self.layout.addWidget(self.roll_image, alignment=Qt.AlignmentFlag.AlignCenter)
 
+        # Bottom bar
         self.button_layout = QHBoxLayout()
         self.layout.addLayout(self.button_layout)
+
+        self.roll_franchise = QComboBox()
         
-        self.roll_button = QPushButton("Roll (Cost: 100 Gacha Points)", self)
+        for franchise in config['franchises']:
+            if config['franchises'][franchise]:
+                self.roll_franchise.addItem(Franchise[franchise].value)
+
+        self.button_layout.addWidget(self.roll_franchise)
+        
+        self.roll_button = QPushButton("Roll (Cost: 100 Gacha Points)")
         self.roll_button.clicked.connect(self.roll)
-        self.layout.addWidget(self.roll_button)
-        
-        # Bottom bar
-        self.roll_stats_layout = QHBoxLayout()
-        self.layout.addLayout(self.roll_stats_layout)
+        self.button_layout.addWidget(self.roll_button)
 
         self.gacha_points = QLabel("Gacha Points Left: Unknown")
 
         if gacha.data.is_logged_in():
-            self.gacha_points.setText("Gacha Points Left: {}".format(gacha.data.gacha_points))
+            self.gacha_points.setText(f"Gacha Points Left: {gacha.data.gacha_points}")
 
-        self.roll_stats_layout.addWidget(self.gacha_points)
+        self.button_layout.addWidget(self.gacha_points)
 
     def roll(self) -> None:
         self.roll_image.setPixmap(self.wish_bg_pixmap)
@@ -351,11 +413,6 @@ class GachaWidget(QWidget):
         timer_callback = functools.partial(self.show_white, roll_pixmap=roll_pixmap)
         self.timer.timeout.connect(timer_callback)
         self.timer.start(150)
-        
-        # # Update roll counts
-        # self.lifetime_rolls.setText("Lifetime Rolls: {}".format(gacha.data.lifetime_rolls))
-        # self.pity_4_star.setText("4-Star Pity: {}".format(gacha.data.pity_4_star))
-        # self.pity_5_star.setText("5-Star Pity: {}".format(gacha.data.pity_5_star))
 
         if type(roll) == Weapon:
             self.weapon_roll_finished.emit(roll)
@@ -375,9 +432,19 @@ class GachaWidget(QWidget):
         self.roll_image.setPixmap(roll_pixmap)
         self.timer.stop()
 
+    @pyqtSlot()
+    def on_settings_loaded(self) -> None:
+        if gacha.data.is_logged_in():
+            self.gacha_points.setText(f"Gacha Points Left: {gacha.data.gacha_points}")
+
+        self.roll_franchise.clear()
+        for franchise in config['franchises']:
+            if config['franchises'][franchise]:
+                self.roll_franchise.addItem(Franchise[franchise].value)
+
 def showWidget() -> None:
     mw.myWidget = widget = DegenerankiWidget()
-    widget.resize(1280, 900)
+    widget.resize(1280, 804)
     widget.show()
 
 def on_answer_button(reviewer, card, ease) -> None:
@@ -386,17 +453,28 @@ def on_answer_button(reviewer, card, ease) -> None:
     else:
         pass
 
-def on_quit() -> None:
-    gacha.data.save()
-    response = gacha.data.account_signout()
+def on_profile_open() -> None:
+    config = mw.addonManager.getConfig("degeneranki.py")
 
-# create a new menu item, "test"
+    if config['email'] and config['password']:
+        gacha.data.account_login(config['email'], config['password'])
+
+def on_reviewer_end() -> None:
+    if gacha.data.is_logged_in():
+        gacha.data.save()
+
+def on_profile_close() -> None:
+    if gacha.data.is_logged_in():
+        gacha.data.save()
+        response = gacha.data.account_signout()
+
+# Add degeneranki menu item
 action = QAction("Degeneranki", mw)
-# set it to call testFunction when it's clicked
 qconnect(action.triggered, showWidget)
-# and add it to the tools menu
 mw.form.menuTools.addAction(action)
 
 # Hooks
+gui_hooks.profile_did_open.append(on_profile_open)
 gui_hooks.reviewer_did_answer_card.append(on_answer_button)
-gui_hooks.profile_will_close.append(on_quit)
+gui_hooks.reviewer_will_end.append(on_reviewer_end)
+gui_hooks.profile_will_close.append(on_profile_close)
