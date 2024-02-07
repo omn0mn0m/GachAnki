@@ -5,6 +5,7 @@ import os
 logging.basicConfig(level=logging.WARNING)
 
 from ._vendor.supabase import create_client, Client
+from ._vendor.gotrue.errors import AuthApiError, AuthInvalidCredentialsError
 from .api import ambr
 
 class Database:
@@ -27,28 +28,36 @@ class Database:
         return self.supabase.auth.get_user() is not None
 
     def account_signup(self, email, password):
-        response = self.supabase.auth.sign_up({
-            "email": email,
-            "password": password,
-        })
-        
-        # Initial account defaults to 0, so no need to load public database
-        self.gacha_points = 0
-        self.lifetime_rolls = 0
-        self.pity_4_star = 0
-        self.pity_5_star = 0
-
-        return response
+        try:
+            response = self.supabase.auth.sign_up({
+                "email": email,
+                "password": password,
+            })
+        except (AuthApiError, AuthInvalidCredentialsError) as e:
+            response = ErrorResponse()
+            response.error = e
+        else:
+            # Initial account defaults to 0, so no need to load public database
+            self.gacha_points = 0
+            self.lifetime_rolls = 0
+            self.pity_4_star = 0
+            self.pity_5_star = 0
+        finally:
+            return response
 
     def account_login(self, email, password):
-        data = self.supabase.auth.sign_in_with_password({
-            "email": email,
-            "password": password,
-        })
-        
-        self.account_load()
-
-        return data
+        try:
+            response = self.supabase.auth.sign_in_with_password({
+                "email": email,
+                "password": password,
+            })
+        except (AuthApiError, AuthInvalidCredentialsError) as e:
+            response = ErrorResponse()
+            response.error = e
+        else:
+            self.account_load()
+        finally:
+            return response
 
     def account_signout(self):
         response = self.supabase.auth.sign_out()
@@ -132,3 +141,6 @@ class Database:
         
         if user_response:
             db_data, count = self.supabase.table('profiles').update(data).eq('id', user_response.user.id).execute()
+
+class ErrorResponse:
+    pass

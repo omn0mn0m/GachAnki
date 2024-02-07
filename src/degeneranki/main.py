@@ -112,7 +112,6 @@ class SettingsWidget(QWidget):
         self.log_in_button.clicked.connect(self.log_in)
 
         self.log_out_button = QPushButton("Log Out")
-        self.log_out_button.setEnabled(False)
         login_buttons_layout.addWidget(self.log_out_button)
         self.log_out_button.clicked.connect(self.log_out)
 
@@ -174,30 +173,48 @@ class SettingsWidget(QWidget):
     def sign_up(self):
         response = gacha.data.account_signup(self.email_edit.text(), self.password_edit.text())
 
+        if hasattr(response, 'error'):
+            msg = QErrorMessage()
+            msg.showMessage(response.error.message)
+
+            return # escape if error during signup
+
         if response.user.aud == 'authenticated':
-            self.sign_up_button.setEnabled(False)
-            self.log_in_button.setEnabled(False)
-            self.log_out_button.setEnabled(True)
+            self.sign_up_button.hide()
+            self.log_in_button.hide()
+            self.log_out_button.show()
             
             config['email'] = self.email_edit.text()
             config['password'] = self.password_edit.text()
             mw.addonManager.writeConfig("degeneranki.py", config)
+
+            self.email_edit.setReadOnly(True)
+            self.password_edit.setReadOnly(True)
 
             self.update_account_stats('0', '0', '0') # new account should not have any stats yet
 
             self.loaded.emit()
 
     def log_in(self) -> None:
-        data = gacha.data.account_login(self.email_edit.text(), self.password_edit.text())
+        response = gacha.data.account_login(self.email_edit.text(), self.password_edit.text())
+
+        if hasattr(response, 'error'):
+            msg = QErrorMessage()
+            msg.showMessage(response.error.message)
+
+            return # escape if error during signup
         
-        if data.user.aud == 'authenticated':
-            self.sign_up_button.setEnabled(False)
-            self.log_in_button.setEnabled(False)
-            self.log_out_button.setEnabled(True)
+        if response.user.aud == 'authenticated':
+            self.sign_up_button.hide()
+            self.log_in_button.hide()
+            self.log_out_button.show()
 
             config['email'] = self.email_edit.text()
             config['password'] = self.password_edit.text()
             mw.addonManager.writeConfig("degeneranki.py", config)
+
+            self.email_edit.setReadOnly(True)
+            self.password_edit.setReadOnly(True)
 
             self.update_account_stats(gacha.data.lifetime_rolls, 
                                       gacha.data.pity_4_star, 
@@ -207,9 +224,9 @@ class SettingsWidget(QWidget):
 
     def log_out(self) -> None:
         response = gacha.data.account_signout()
-        self.sign_up_button.setEnabled(True)
-        self.log_in_button.setEnabled(True)
-        self.log_out_button.setEnabled(False)
+        self.sign_up_button.show()
+        self.log_in_button.show()
+        self.log_out_button.hide()
 
         config['email'] = ''
         config['password'] = ''
@@ -217,6 +234,9 @@ class SettingsWidget(QWidget):
 
         self.email_edit.setText('')
         self.password_edit.setText('')
+
+        self.email_edit.setReadOnly(False)
+        self.password_edit.setReadOnly(False)
 
         self.update_account_stats('Unknown', 'Unknown', 'Unknown')
 
@@ -231,6 +251,10 @@ class SettingsWidget(QWidget):
             self.password_edit.setText(config['password'])
 
             self.log_in()
+        else:
+            self.sign_up_button.show()
+            self.log_in_button.show()
+            self.log_out_button.hide()
 
         # Load franchise settings
         for i, checkbox in enumerate(self.franchise_groupbox.findChildren(QCheckBox)):
