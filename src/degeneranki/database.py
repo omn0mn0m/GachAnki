@@ -4,8 +4,8 @@ import os
 
 logging.basicConfig(level=logging.WARNING)
 
-from .vendor.supabase import create_client, Client
-from .vendor.gotrue.errors import AuthApiError, AuthInvalidCredentialsError
+from ._vendor.supabase import create_client, Client
+from ._vendor.gotrue.errors import AuthApiError, AuthInvalidCredentialsError
 from .api import ambr
 
 class Database:

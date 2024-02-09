@@ -8,9 +8,9 @@ dev = [
 ]
 
 [tool.vendoring]
-destination = 'src/degeneranki/vendor/'
-requirements = 'src/degeneranki/vendor/vendors.txt'
-namespace = 'degeneranki.vendor'
+destination = 'src/degeneranki/_vendor/'
+requirements = 'src/degeneranki/_vendor/vendors.txt'
+namespace = 'degeneranki._vendor'
 protected-files = [
     '__init__.py',
     'README.md',
@@ -20,7 +20,12 @@ patches-dir = 'tools/vendoring/patches'
 
 [tool.vendoring.transformations]
 substitute = [
-    {match = '__import__("supabase")', replace = '__import__("degeneranki.vendor.supabase")'},
+    # storage3
+    { match='dateutil.parser', replace='degeneranki._vendor.dateutil.parser' },
+    # pydantic
+    { match='pydantic.color', replace='degeneranki._vendor.pydantic.color' },
+    { match='pydantic.types', replace='degeneranki._vendor.pydantic.types' },
+    { match='pydantic.dataclasses', replace='degeneranki._vendor.pydantic.dataclasses' },
 ]
 drop = [
     'bin/',
