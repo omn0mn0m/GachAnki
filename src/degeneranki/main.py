@@ -27,7 +27,7 @@ sys.path.insert(1, path.abspath(path.dirname(__file__)))
 root_project_dir = path.abspath(path.dirname(__file__))
 res_files_dir = path.join(root_project_dir, "res")
 
-config = mw.addonManager.getConfig("degeneranki.py") # initial load
+config = mw.addonManager.getConfig(__name__) # initial load
 
 class Franchise(Enum):
     GENSHIN_IMPACT = 'Genshin Impact'
@@ -186,7 +186,7 @@ class SettingsWidget(QWidget):
             
             config['email'] = self.email_edit.text()
             config['password'] = self.password_edit.text()
-            mw.addonManager.writeConfig("degeneranki.py", config)
+            mw.addonManager.writeConfig(__name__, config)
 
             self.email_edit.setReadOnly(True)
             self.password_edit.setReadOnly(True)
@@ -211,7 +211,7 @@ class SettingsWidget(QWidget):
 
             config['email'] = self.email_edit.text()
             config['password'] = self.password_edit.text()
-            mw.addonManager.writeConfig("degeneranki.py", config)
+            mw.addonManager.writeConfig(__name__, config)
 
             self.email_edit.setReadOnly(True)
             self.password_edit.setReadOnly(True)
@@ -230,7 +230,7 @@ class SettingsWidget(QWidget):
 
         config['email'] = ''
         config['password'] = ''
-        mw.addonManager.writeConfig("degeneranki.py", config)
+        mw.addonManager.writeConfig(__name__, config)
 
         self.email_edit.setText('')
         self.password_edit.setText('')
@@ -243,7 +243,7 @@ class SettingsWidget(QWidget):
         self.loaded.emit()
 
     def load_config(self) -> None:
-        config = mw.addonManager.getConfig("degeneranki.py")
+        config = mw.addonManager.getConfig(__name__)
         
         # Load account
         if config['email'] and config['password']:
@@ -266,7 +266,7 @@ class SettingsWidget(QWidget):
         for i, checkbox in enumerate(self.franchise_groupbox.findChildren(QCheckBox)):
             config['franchises'][str(list(Franchise)[i]).split('.')[1]] = checkbox.isChecked()
         
-        mw.addonManager.writeConfig("degeneranki.py", config)
+        mw.addonManager.writeConfig(__name__, config)
 
         self.loaded.emit()
 
@@ -487,7 +487,7 @@ def on_answer_button(reviewer, card, ease) -> None:
             pass
 
 def on_profile_open() -> None:
-    config = mw.addonManager.getConfig("degeneranki.py")
+    config = mw.addonManager.getConfig(__name__)
 
     if config['email'] and config['password']:
         gacha.data.account_login(config['email'], config['password'])
