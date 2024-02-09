@@ -3,7 +3,7 @@ all: install degeneranki.ankiaddon
 degeneranki.ankiaddon:
 	(cd src/degeneranki; \
 	rm -r __pycache__; \
-	zip $@ -FSr . -x *~ meta.json user_files/data.json user_files/database.db *__pycache__/* @; \
+	zip $@ -FSr . -x *~ meta.json *__pycache__/* @; \
 	mv $@ ../../build/)
 
 install: vendoring
@@ -17,6 +17,3 @@ venv/touchfile: pyproject.toml
 
 vendoring: venv/touchfile
 	. venv/bin/activate; vendoring sync
-
-vendorize: vendorize.toml venv/touchfile
-	. venv/bin/activate; python-vendorize
