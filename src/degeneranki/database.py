@@ -4,6 +4,8 @@ import os
 
 logging.basicConfig(level=logging.WARNING)
 
+import requests
+
 from ._vendor.supabase import create_client, Client
 from ._vendor.gotrue.errors import AuthApiError, AuthInvalidCredentialsError
 from .api import ambr
@@ -11,13 +13,7 @@ from .api import ambr
 class Database:
 
     def __init__(self):
-        # Default to public Supabase credentials
-        url = os.environ.get('SUPABASE_URL', 
-                             'https://fsasczgnagdnyclkdvyk.supabase.co')
-        key = os.environ.get('SUPABASE_KEY', 
-                             'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzYXNjemduYWdkbnljbGtkdnlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDU5ODEyMzYsImV4cCI6MjAyMTU1NzIzNn0.L2A-5o50ikk8PdV1xVseRbth9Rk45HaiwQNebkitBCY')
-        self.supabase: Client = create_client(url, key)
-        
+        self.pocketbase = PocketBase('https://degeneranki.pockethost.io/')
         self.account_load()
         
         # Load characters and weapons
@@ -25,7 +21,7 @@ class Database:
         self.weapons = ambr.get_weapons()
 
     def is_logged_in(self):
-        return self.supabase.auth.get_user() is not None
+        return self.pocketbase.is_logged_in()
 
     def account_signup(self, email, password):
         try:
@@ -64,16 +60,11 @@ class Database:
         return response
 
     def account_load(self):
-        user_response = self.supabase.auth.get_user()
-        
-        if user_response:
-            response = self.supabase.table("profiles").select("*").eq("id", user_response.user.id).execute()
-        
-            if response:
-                self.gacha_points = response.data[0]['gacha_points']
-                self.lifetime_rolls = response.data[0]['lifetime_rolls']
-                self.pity_4_star = response.data[0]['pity_4_star']
-                self.pity_5_star = response.data[0]['pity_5_star']
+        if self.pocketbase.is_logged_in():
+            self.gacha_points = self.pocketbase.profile['gachaPoints']
+            self.lifetime_rolls = self.pocketbase.profile['lifetimeRolls']
+            self.pity_4_star = self.pocketbase.profile['pity4Star']
+            self.pity_5_star = self.pocketbase.profile['pity5Star']
 
     def get_owned_characters(self):
         user_response = self.supabase.auth.get_user()
@@ -144,3 +135,35 @@ class Database:
 
 class ErrorResponse:
     pass
+
+
+class PocketBase:
+    
+    def __init__(self, url):
+        self.url = url
+        self.token = ''
+
+    def login(self, username, password):
+        login_url = self.url + '/api/collections/collectionIdOrName/auth-with-password'
+        response = requests.post(login_url, data={
+            'identity': username,
+            'password': password,
+        })
+
+        if 'token' in response:
+            self.token = response['token']
+            self.profile = response['record']
+
+    def register(self, username, password):
+        register_url = self.url + '/api/collections/users/records'
+        response = requests.post(register_url, data={
+            'username': username,
+            'password': password,
+            'passowrdConfirm': password,
+        })
+
+    def is_logged_in(self):
+        return self.token != ''
+
+    def log_out(self):
+        self.token = ''
