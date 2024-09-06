@@ -32,7 +32,7 @@ def sort_by_rarity(items):
 # === Characters ===
 @dataclass
 class Character:
-    id: int
+    id: str
     name: str
     rarity: int
     icon: str
@@ -45,7 +45,7 @@ def get_characters() -> dict:
     characters = {}
 
     for id, data in response['items'].items():
-        characters[int(id.split('-')[0])] = Character(id = data['id'],
+        characters[str(id)] = Character(id = str(data['id']),
                                         name = data['name'],
                                         rarity = data['rank'],
                                         icon = image_url.format(data['icon']),

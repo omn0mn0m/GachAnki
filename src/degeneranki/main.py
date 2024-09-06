@@ -5,7 +5,6 @@ from os import path
 from enum import Enum
 
 from .gacha import GachaMachine
-from .database import Database
 from .api.ambr import Weapon, Character
 
 # import the main window object (mw) from aqt
@@ -50,7 +49,7 @@ class DegenerankiWidget(QTabWidget):
         #self.gachaTab.weapon_roll_finished.connect(self.weaponsTab.on_roll_finished)
 
         self.gachaTab.character_roll_finished.connect(self.settingsTab.on_roll_finished)
-        self.gachaTab.weapon_roll_finished.connect(self.settingsTab.on_roll_finished)
+        #self.gachaTab.weapon_roll_finished.connect(self.settingsTab.on_roll_finished)
 
         self.settingsTab.loaded.connect(self.on_settings_loaded)
         self.settingsTab.loaded.connect(self.gachaTab.on_settings_loaded)
@@ -96,8 +95,8 @@ class SettingsWidget(QWidget):
 
         # Create sign up form
         login_form = QFormLayout()
-        self.email_edit = QLineEdit()
-        login_form.addRow("Email", self.email_edit)
+        self.username_edit = QLineEdit()
+        login_form.addRow("Username", self.username_edit)
         self.password_edit = QLineEdit()
         login_form.addRow("Password", self.password_edit)
         login_form_vertical_layout.addLayout(login_form)
@@ -171,24 +170,24 @@ class SettingsWidget(QWidget):
         self.pity_5_star_label.setText(f"5-Star Pity: {pity_5_star}")
 
     def sign_up(self):
-        response = gacha.data.account_signup(self.email_edit.text(), self.password_edit.text())
+        response = gacha.data.account_signup(self.username_edit.text(), self.password_edit.text())
 
-        if hasattr(response, 'error'):
-            msg = QErrorMessage()
-            msg.showMessage(response.error.message)
+        # if hasattr(response, 'error'):
+        #     msg = QErrorMessage()
+        #     msg.showMessage(response.error.message)
 
-            return # escape if error during signup
+        #     return # escape if error during signup
 
-        if response.user.aud == 'authenticated':
+        if response == 200 and gacha.data.is_logged_in():
             self.sign_up_button.hide()
             self.log_in_button.hide()
             self.log_out_button.show()
             
-            config['email'] = self.email_edit.text()
+            config['username'] = self.username_edit.text()
             config['password'] = self.password_edit.text()
             mw.addonManager.writeConfig(__name__, config)
 
-            self.email_edit.setReadOnly(True)
+            self.username_edit.setReadOnly(True)
             self.password_edit.setReadOnly(True)
 
             self.update_account_stats('0', '0', '0') # new account should not have any stats yet
@@ -196,7 +195,7 @@ class SettingsWidget(QWidget):
             self.loaded.emit()
 
     def log_in(self) -> None:
-        response = gacha.data.account_login(self.email_edit.text(), self.password_edit.text())
+        response = gacha.data.account_login(self.username_edit.text(), self.password_edit.text())
 
         if hasattr(response, 'error'):
             msg = QErrorMessage()
@@ -204,16 +203,16 @@ class SettingsWidget(QWidget):
 
             return # escape if error during signup
         
-        if response.user.aud == 'authenticated':
+        if response == 200 and gacha.data.is_logged_in():
             self.sign_up_button.hide()
             self.log_in_button.hide()
             self.log_out_button.show()
 
-            config['email'] = self.email_edit.text()
+            config['username'] = self.username_edit.text()
             config['password'] = self.password_edit.text()
             mw.addonManager.writeConfig(__name__, config)
 
-            self.email_edit.setReadOnly(True)
+            self.username_edit.setReadOnly(True)
             self.password_edit.setReadOnly(True)
 
             self.update_account_stats(gacha.data.lifetime_rolls, 
@@ -223,19 +222,19 @@ class SettingsWidget(QWidget):
             self.loaded.emit()
 
     def log_out(self) -> None:
-        response = gacha.data.account_signout()
+        gacha.data.account_signout()
         self.sign_up_button.show()
         self.log_in_button.show()
         self.log_out_button.hide()
 
-        config['email'] = ''
+        config['username'] = ''
         config['password'] = ''
         mw.addonManager.writeConfig(__name__, config)
 
-        self.email_edit.setText('')
+        self.username_edit.setText('')
         self.password_edit.setText('')
 
-        self.email_edit.setReadOnly(False)
+        self.username_edit.setReadOnly(False)
         self.password_edit.setReadOnly(False)
 
         self.update_account_stats('Unknown', 'Unknown', 'Unknown')
@@ -246,8 +245,8 @@ class SettingsWidget(QWidget):
         config = mw.addonManager.getConfig(__name__)
         
         # Load account
-        if config['email'] and config['password']:
-            self.email_edit.setText(config['email'])
+        if config['username'] and config['password']:
+            self.username_edit.setText(config['username'])
             self.password_edit.setText(config['password'])
 
             self.log_in()
@@ -307,12 +306,14 @@ class InventoryWidget(QScrollArea):
         self.grid_contents = []
 
         if inventory_type == InventoryWidget.InventoryTypes.WEAPONS:
-            for i, data in enumerate(gacha.data.get_owned_weapons()):
-                info = gacha.data.weapons[data['items']['lookup_id']]
-                self.add_to_grid(info)
+            pass
+            # for i, data in enumerate(gacha.data.get_owned_weapons()):
+            #     info = gacha.data.weapons[data['lookup_id']]
+            #     self.add_to_grid(info)
         elif inventory_type == InventoryWidget.InventoryTypes.CHARACTERS:
-            for i, data in enumerate(gacha.data.get_owned_characters()):
-                info = gacha.data.characters[data['items']['lookup_id']]
+            print(gacha.data.get_owned_characters("genshin_impact"))
+            for i, data in enumerate(gacha.data.get_owned_characters("genshin_impact")):
+                info = gacha.data.characters[data['lookup_id']]
                 self.add_to_grid(info)
 
     def add_to_grid(self, info):
@@ -489,8 +490,8 @@ def on_answer_button(reviewer, card, ease) -> None:
 def on_profile_open() -> None:
     config = mw.addonManager.getConfig(__name__)
 
-    if config['email'] and config['password']:
-        gacha.data.account_login(config['email'], config['password'])
+    if config['username'] and config['password']:
+        gacha.data.account_login(config['username'], config['password'])
 
 def on_reviewer_end() -> None:
     if gacha.data.is_logged_in():
@@ -499,7 +500,7 @@ def on_reviewer_end() -> None:
 def on_profile_close() -> None:
     if gacha.data.is_logged_in():
         gacha.data.save()
-        response = gacha.data.account_signout()
+        gacha.data.account_signout()
 
 # Add degeneranki menu item
 action = QAction("Degeneranki", mw)

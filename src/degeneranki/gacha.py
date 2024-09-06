@@ -19,7 +19,7 @@ class GachaMachine:
         self.rarity_sorted_weapons = ambr.sort_by_rarity(self.data.weapons)
 
     def roll(self):
-        roll = {}
+        pull = {}
 
         # Add 1 roll and remove gacha points
         self.data.lifetime_rolls += 1
@@ -30,24 +30,22 @@ class GachaMachine:
 
         if x < prob_5_star:
             pull = random.choice(self.rarity_sorted_characters[5])
-            self.data.add_owned_character(pull, 'GENSHIN_IMPACT')
+            self.data.add_owned_character(pull, 'genshin_impact')
             self.data.pity_5_star = 0
             self.data.pity_4_star += 1
         elif x < (prob_4_star + prob_5_star):
             if random.randint(0, 1):
                 pull = random.choice(self.rarity_sorted_characters[4])
-                self.data.add_owned_character(pull, 'GENSHIN_IMPACT')
+                self.data.add_owned_character(pull, 'genshin_impact')
             else:
                 pull = random.choice(self.rarity_sorted_weapons[4])
                 pull.name = 'Pity Fodder'
-                #self.data.add_owned_weapon(pull.id)
 
             self.data.pity_5_star += 1
             self.data.pity_4_star = 0
         else:
             pull = random.choice(self.rarity_sorted_weapons[3])
             pull.name = 'Pity Fodder'
-            #self.data.add_owned_weapon(pull.id)
 
             self.data.pity_4_star += 1
             self.data.pity_5_star += 1
