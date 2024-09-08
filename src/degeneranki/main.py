@@ -5,7 +5,7 @@ from os import path
 from enum import Enum
 
 from .gacha import GachaMachine
-from .api.ambr import Weapon, Character
+from .api.ambr import Character
 
 # import the main window object (mw) from aqt
 from aqt import gui_hooks, mw
@@ -41,15 +41,11 @@ class DegenerankiWidget(QTabWidget):
         
         self.settingsTab = SettingsWidget()
         self.gachaTab = GachaWidget()
-        self.charactersTab = InventoryWidget(InventoryWidget.InventoryTypes.CHARACTERS)
-        # self.weaponsTab = InventoryWidget(InventoryWidget.InventoryTypes.WEAPONS)
+        self.charactersTab = InventoryWidget()
 
         # Signals and slots
         self.gachaTab.character_roll_finished.connect(self.charactersTab.on_roll_finished)
-        #self.gachaTab.weapon_roll_finished.connect(self.weaponsTab.on_roll_finished)
-
         self.gachaTab.character_roll_finished.connect(self.settingsTab.on_roll_finished)
-        #self.gachaTab.weapon_roll_finished.connect(self.settingsTab.on_roll_finished)
 
         self.settingsTab.loaded.connect(self.on_settings_loaded)
         self.settingsTab.loaded.connect(self.gachaTab.on_settings_loaded)
@@ -58,7 +54,6 @@ class DegenerankiWidget(QTabWidget):
         # Add tabs
         self.gacha_tab_index = self.addTab(self.gachaTab, "Gacha")
         self.characters_tab_index = self.addTab(self.charactersTab, "Characters")
-        # self.addTab(self.weaponsTab, "Weapons")
         self.settings_tab_index = self.addTab(self.settingsTab, "Settings")
 
         if not gacha.data.is_logged_in():
@@ -269,7 +264,6 @@ class SettingsWidget(QWidget):
 
         self.loaded.emit()
 
-    @pyqtSlot(Weapon)
     @pyqtSlot(Character)
     def on_roll_finished(self, roll) -> None:
         self.update_account_stats(gacha.data.lifetime_rolls, 
@@ -279,15 +273,9 @@ class SettingsWidget(QWidget):
 class InventoryWidget(QScrollArea):
 
     MAX_COL_ITEMS = 4
-
-    class InventoryTypes(Enum):
-        WEAPONS = 'Weapon',
-        CHARACTERS = 'Character'
     
-    def __init__(self, inventory_type, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super(InventoryWidget, self).__init__(*args, **kwargs)
-
-        self.inventory_type = inventory_type
         
         self.network_manager = QNetworkAccessManager()
         self.network_manager.finished.connect(self.on_finished)
@@ -297,24 +285,17 @@ class InventoryWidget(QScrollArea):
         self.setWidget(self.wrapper_widget)
         self.setWidgetResizable(True)
 
-        self.fill_grid(inventory_type)
+        self.fill_grid()
 
-    def fill_grid(self, inventory_type):
+    def fill_grid(self):
         self.row = 0
         self.col = 0
 
         self.grid_contents = []
 
-        if inventory_type == InventoryWidget.InventoryTypes.WEAPONS:
-            pass
-            # for i, data in enumerate(gacha.data.get_owned_weapons()):
-            #     info = gacha.data.weapons[data['lookup_id']]
-            #     self.add_to_grid(info)
-        elif inventory_type == InventoryWidget.InventoryTypes.CHARACTERS:
-            print(gacha.data.get_owned_characters("genshin_impact"))
-            for i, data in enumerate(gacha.data.get_owned_characters("genshin_impact")):
-                info = gacha.data.characters[data['lookup_id']]
-                self.add_to_grid(info)
+        for i, data in enumerate(gacha.data.get_owned_characters("genshin_impact")):
+            info = gacha.data.characters[data['lookup_id']]
+            self.add_to_grid(info)
 
     def add_to_grid(self, info):
         if info not in self.grid_contents:
@@ -345,17 +326,15 @@ class InventoryWidget(QScrollArea):
             self.col = 0
             self.row += 1
 
-    @pyqtSlot(Weapon)
     @pyqtSlot(Character)
     def on_roll_finished(self, roll):
         self.add_to_grid(roll)
 
     @pyqtSlot()
     def on_settings_loaded(self) -> None:
-        self.fill_grid(self.inventory_type)
+        self.fill_grid()
 
 class GachaWidget(QWidget):
-    weapon_roll_finished = pyqtSignal(Weapon)
     character_roll_finished = pyqtSignal(Character)
     
     def __init__(self, *args, **kwargs):
@@ -447,9 +426,7 @@ class GachaWidget(QWidget):
         self.timer.timeout.connect(timer_callback)
         self.timer.start(150)
 
-        if type(roll) == Weapon:
-            self.weapon_roll_finished.emit(roll)
-        elif type(roll) == Character:
+        if type(roll) == Character:
             self.character_roll_finished.emit(roll)
 
     def show_white(self, roll_pixmap):

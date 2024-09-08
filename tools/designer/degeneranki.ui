@@ -35,7 +35,7 @@
    <bool>false</bool>
   </property>
   <property name="currentIndex">
-   <number>3</number>
+   <number>1</number>
   </property>
   <widget class="QWidget" name="tab">
    <attribute name="title">
@@ -89,6 +89,35 @@
    <attribute name="title">
     <string>Characters</string>
    </attribute>
+   <widget class="QScrollArea" name="scrollArea">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>10</y>
+      <width>1241</width>
+      <height>751</height>
+     </rect>
+    </property>
+    <property name="layoutDirection">
+     <enum>Qt::LeftToRight</enum>
+    </property>
+    <property name="horizontalScrollBarPolicy">
+     <enum>Qt::ScrollBarAsNeeded</enum>
+    </property>
+    <property name="widgetResizable">
+     <bool>true</bool>
+    </property>
+    <widget class="QWidget" name="scrollAreaWidgetContents">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>1239</width>
+       <height>749</height>
+      </rect>
+     </property>
+    </widget>
+   </widget>
   </widget>
   <widget class="QWidget" name="tab_3">
    <attribute name="title">
