@@ -1,6 +1,4 @@
-import json
 import random
-from enum import Enum
 
 from .api import ambr
 from .database import Database
