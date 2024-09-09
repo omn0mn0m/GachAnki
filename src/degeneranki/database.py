@@ -1,7 +1,6 @@
 import json
 import os
-
-import requests
+import urllib3
 
 from .api import ambr
 
@@ -11,12 +10,13 @@ class Database:
     token = ''
     profile = {}
 
+    http = urllib3.PoolManager()
+
     def __init__(self):
         self.account_load()
         
         # Load characters and weapons
         self.characters = ambr.get_characters()
-        print(self.characters)
         self.weapons = ambr.get_weapons()
 
     def is_logged_in(self):
@@ -40,15 +40,21 @@ class Database:
             "Content-Type": "application/json"
         }
 
-        response = requests.post(url, json=payload, headers=headers)
-
-        if response.status_code == 200:
+        response = self.http.request(
+            'POST',
+            url,
+            body=json.dumps(payload),
+            headers=headers
+        )
+        
+        if response.status == 200:
             # Pocketbase requires separate auth after creating user
             self.account_login(username, password)
         else:
-            print(f"{response.status_code}: {response.json()['message']}.")
-        
-        return response.status_code
+            response_data = json.loads(response.data.decode('utf-8'))
+            print(f"{response.status}: {response_data['message']}.")
+            
+        return response.status
 
     def account_login(self, username, password):
         url = self.base_url + '/api/collections/users/auth-with-password'
@@ -61,18 +67,24 @@ class Database:
             "Content-Type": "application/json",
         }
 
-        response = requests.post(url, json=payload, headers=headers)
+        response = self.http.request(
+            'POST',
+            url,
+            body=json.dumps(payload),
+            headers=headers
+        )
         
-        if response.status_code == 200:
-            response_json = response.json()
+        if response.status == 200:
+            response_json = json.loads(response.data.decode('utf-8'))
             self.token = response_json['token']
             self.profile = response_json['record']
-
+            
             self.account_load()
         else:
-            print(f"{response.status_code}: {response.json()['message']}")
-        
-        return response.status_code
+            response_data = json.loads(response.data.decode('utf-8'))
+            print(f"{response.status}: {response_data['message']}")
+            
+        return response.status
 
     def account_signout(self):
         self.token = ''
@@ -92,34 +104,40 @@ class Database:
 
     def get_owned_characters(self, franchise):
         character_list = []
-        
+    
         if self.is_logged_in():
             url = self.base_url + '/api/collections/character_inventory/records'
-
-            querystring = {"filter":f"(user='{self.profile['id']}' && franchise='{franchise}')"}
-
-            payload = ""
-            headers = {}
-
-            response = requests.get(url, data=payload, headers=headers, params=querystring)
-
-            if response.status_code == 200:
-                response_json = response.json()
+            http = urllib3.PoolManager()
+            
+            def fetch_page(page=1):
+                querystring = {
+                    "filter": f"(user='{self.profile['id']}' && franchise='{franchise}')",
+                    "page": page
+                }
+                response = http.request(
+                    'GET',
+                    url,
+                    fields=querystring
+                )
+                if response.status == 200:
+                    return json.loads(response.data.decode('utf-8'))
+                else:
+                    print(f"{response.status}: {json.loads(response.data.decode('utf-8'))['message']}.")
+                    return None
+        
+            # Fetch first page
+            response_json = fetch_page()
+            if response_json:
                 character_list.extend(response_json['items'])
-
-                while (response_json['page'] < response_json['totalPages']):
-                    querystring = {
-                        "filter": f"(user='{self.profile['id']}' && franchise='{franchise}')",
-                        "page": response_json['page'] + 1
-                    }
-                    response = requests.get(url, data=payload, headers=headers, params=querystring)
-                    
-                    response_json = response.json()
-                    character_list.extend(response_json['items'])
-                    print(character_list)
-            else:
-                print(f"{response.status_code}: {response.json()['message']}.")  
-
+                
+                # Fetch remaining pages if any
+                for page in range(2, response_json['totalPages'] + 1):
+                    response_json = fetch_page(page)
+                    if response_json:
+                        character_list.extend(response_json['items'])
+                    else:
+                        break
+    
         return character_list
 
     def add_owned_character(self, character, franchise) -> None:
@@ -140,10 +158,15 @@ class Database:
                 "Authorization": self.token,
             }
             
-            response = requests.post(url, json=payload, headers=headers)
-
-            if response.status_code == 200:
-                pass
+            response = self.http.request(
+                'POST',
+                url,
+                body=json.dumps(payload),
+                headers=headers
+            )
+            
+            if response.status == 200:
+                pass  # Operation successful, no further action required
 
     def save(self):
         if self.is_logged_in():
@@ -160,8 +183,13 @@ class Database:
                 "Authorization": self.token,
             }
 
-            response = requests.patch(url, json=payload, headers=headers)
-
-            if response.status_code == 200:
-                pass
+            response = self.http.request(
+                'PATCH',
+                url,
+                body=json.dumps(payload),
+                headers=headers
+            )
+            
+            if response.status == 200:
+                pass  # Operation successful
 
