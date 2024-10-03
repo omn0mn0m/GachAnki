@@ -305,14 +305,15 @@ class InventoryWidget(QScrollArea):
 
     @pyqtSlot(QNetworkReply)
     def on_finished(self, reply):
-        inventory_label = QLabel()
-        label_measure = self.width() // self.MAX_COL_ITEMS
-        inventory_label.setSizePolicy(QSizePolicy().Policy.Fixed, QSizePolicy().Policy.Fixed)
-        inventory_label.setFixedSize(label_measure, label_measure)
-        inventory_label.setMaximumSize(label_measure, label_measure)
-        
         image = QImage()
         image.loadFromData(reply.readAll())
+
+        # TODO handle image not loaded
+
+        inventory_label = QLabel(self.wrapper_widget)
+        label_measure = self.width() // self.MAX_COL_ITEMS
+        inventory_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        inventory_label.setFixedSize(label_measure, label_measure)
         
         image_pixmap = QPixmap.fromImage(image)
         inventory_label.setPixmap(image_pixmap.scaled(inventory_label.size(), 
@@ -340,19 +341,15 @@ class GachaWidget(QWidget):
     def __init__(self, *args, **kwargs):
         super(GachaWidget, self).__init__(*args, **kwargs)
 
-        wish_bg_image = QImage()
-        with open(path.join(res_files_dir, "wish-background.jpg"), 'rb') as img:
-            wish_bg_image.loadFromData(img.read())
-        self.wish_bg_pixmap = QPixmap(wish_bg_image).scaled(MAX_ROLL_IMAGE_WIDTH, MAX_ROLL_IMAGE_HEIGHT)
+        # Init images
+        self.wish_bg_pixmap = self.load_and_scale_image("wish-background.jpg", MAX_ROLL_IMAGE_WIDTH, MAX_ROLL_IMAGE_HEIGHT)
 
         self.flash_bg_pixmap = QPixmap(MAX_ROLL_IMAGE_WIDTH, MAX_ROLL_IMAGE_HEIGHT)
         self.flash_bg_pixmap.fill()
         
-        roll_bg_image = QImage()
-        with open(path.join(res_files_dir, "roll-background.jpg"), 'rb') as img:
-            roll_bg_image.loadFromData(img.read())
-        self.roll_bg_pixmap = QPixmap(roll_bg_image).scaled(MAX_ROLL_IMAGE_WIDTH, MAX_ROLL_IMAGE_HEIGHT)
+        self.roll_bg_pixmap = self.load_and_scale_image("roll-background.jpg", MAX_ROLL_IMAGE_WIDTH, MAX_ROLL_IMAGE_HEIGHT)
 
+        # Init UI
         self.layout = QVBoxLayout(self)
         
         self.roll_image = QLabel()
@@ -382,6 +379,15 @@ class GachaWidget(QWidget):
             self.gacha_points.setText(f"Gacha Points Left: {gacha.data.gacha_points}")
 
         self.button_layout.addWidget(self.gacha_points)
+
+    def load_and_scale_image(self, image_filename: str, width: int, height: int) -> QPixmap:
+        image = QImage()
+        image_path = path.join(res_files_dir, image_filename)
+
+        with open(image_path, 'rb') as img_file:
+            image.loadFromData(img_file.read())
+        
+        return QPixmap(image).scaled(width, height)
 
     def roll(self) -> None:
         self.roll_image.setPixmap(self.wish_bg_pixmap)
