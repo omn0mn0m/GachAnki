@@ -1,5 +1,5 @@
 [project]
-name = 'degeneranki'
+name = 'GachAnki'
 version = '0.4.1'
 
 [project.optional-dependencies]
@@ -8,8 +8,8 @@ dev = [
 ]
 
 [tool.vendoring]
-destination = 'src/degeneranki/_vendor/'
-requirements = 'src/degeneranki/_vendor/vendors.txt'
+destination = 'src/gachanki/_vendor/'
+requirements = 'src/gachanki/_vendor/vendors.txt'
 namespace = '._vendor'
 protected-files = [
     '__init__.py',
